@@ -1,0 +1,2 @@
+import test from "node:test"; import assert from "node:assert/strict"; import { argumentsSchemas } from "./index.js";
+test("each MCP tool rejects invalid arguments", () => { assert.equal(argumentsSchemas.get_event_guidance.safeParse({}).success, false); assert.equal(argumentsSchemas.validate_project_strategy.safeParse({ idea: "x", extra: true }).success, false); assert.equal(argumentsSchemas.audit_submission.safeParse({ repositoryUrl: "not-a-url", summary: "x" }).success, false); });

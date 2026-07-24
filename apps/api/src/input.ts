@@ -1,0 +1,2 @@
+import { z } from "zod";
+export const toolSchemas = { get_event_guidance: z.object({ question: z.string().min(1).max(2000) }).strict(), validate_project_strategy: z.object({ idea: z.string().min(1).max(5000), track: z.string().min(1).max(200).optional() }).strict(), audit_submission: z.object({ repositoryUrl: z.string().url().optional(), summary: z.string().min(1).max(5000) }).strict() } as const;
