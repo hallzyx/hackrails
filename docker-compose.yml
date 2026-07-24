@@ -1,0 +1,52 @@
+﻿services:
+  postgres:
+    image: postgres:16-alpine
+    environment: { POSTGRES_DB: hackrails, POSTGRES_USER: hackrails, POSTGRES_PASSWORD: hackrails }
+    volumes: ["postgres_data:/var/lib/postgresql/data", "./db/init:/docker-entrypoint-initdb.d:ro"]
+    healthcheck: { test: ["CMD-SHELL", "pg_isready -U hackrails -d hackrails"], interval: 5s, timeout: 5s, retries: 12 }
+  provider:
+    build: { context: ., dockerfile: apps/provider/Dockerfile }
+    environment:
+      PORT: 4002
+      DEMO_MODE: ${DEMO_MODE:-true}
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://api.testnet.blocky402.com}
+      HEDERA_NETWORK: ${HEDERA_NETWORK:-hedera:testnet}
+      HEDERA_USDC_TOKEN_ID: ${HEDERA_USDC_TOKEN_ID:-0.0.429274}
+      HEDERA_RECIPIENT_ACCOUNT_ID: ${HEDERA_RECIPIENT_ACCOUNT_ID:-0.0.1002}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+    ports: ["4002:4002"]
+    healthcheck: { test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4002/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""], interval: 5s, timeout: 5s, retries: 12 }
+  api:
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://hackrails:hackrails@postgres:5432/hackrails
+      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_ADMIN_KEY: ${DEMO_ADMIN_KEY:?Set DEMO_ADMIN_KEY for the local demo}
+      CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
+      PREMIUM_SERVICE_URL: http://provider:4002
+      X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://api.testnet.blocky402.com}
+      HEDERA_NETWORK: ${HEDERA_NETWORK:-hedera:testnet}
+      HEDERA_ACCOUNT_ID: ${HEDERA_ACCOUNT_ID:-}
+      HEDERA_PRIVATE_KEY: ${HEDERA_PRIVATE_KEY:-}
+      HEDERA_USDC_TOKEN_ID: ${HEDERA_USDC_TOKEN_ID:-0.0.429274}
+      HEDERA_RECIPIENT_ACCOUNT_ID: ${HEDERA_RECIPIENT_ACCOUNT_ID:-0.0.1002}
+    depends_on: { postgres: { condition: service_healthy }, provider: { condition: service_healthy } }
+    ports: ["4000:4000"]
+    healthcheck: { test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""], interval: 5s, timeout: 5s, retries: 12 }
+  mcp:
+    build: { context: ., dockerfile: apps/mcp/Dockerfile }
+    environment: { PORT: 4001, API_URL: http://api:4000 }
+    depends_on: { api: { condition: service_healthy } }
+    ports: ["4001:4001"]
+    healthcheck: { test: ["CMD-SHELL", "node -e \"fetch('http://localhost:4001/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))\""], interval: 5s, timeout: 5s, retries: 12 }
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+    environment: { API_URL: http://api:4000, NEXT_PUBLIC_API_URL: http://localhost:4000 }
+    depends_on: { api: { condition: service_healthy } }
+    ports: ["3000:3000"]
+volumes: { postgres_data: }

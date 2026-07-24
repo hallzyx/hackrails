@@ -1,0 +1,5 @@
+{
+  "name":"hackrails","private":true,"version":"0.1.0","workspaces":["apps/*","packages/*"],
+  "scripts":{"dev":"concurrently -n api,provider,mcp,web -c cyan,amber,blue,mint \"npm run dev -w @hackrails/api\" \"npm run dev -w @hackrails/provider\" \"npm run dev -w @hackrails/mcp\" \"npm run dev -w @hackrails/web\"","build":"npm run build -w @hackrails/shared && npm run build -w @hackrails/provider && npm run build -w @hackrails/api && npm run build -w @hackrails/mcp && npm run build -w @hackrails/web","typecheck":"npm run build -w @hackrails/shared && npm run typecheck -w @hackrails/provider && npm run typecheck -w @hackrails/api && npm run typecheck -w @hackrails/mcp && npm run typecheck -w @hackrails/web","test":"npm run test -w @hackrails/provider && npm run test -w @hackrails/api","seed":"npm run seed -w @hackrails/api"},
+  "devDependencies":{"concurrently":"^9.1.2","typescript":"^5.7.3"}
+}
