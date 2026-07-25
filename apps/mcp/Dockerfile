@@ -12,4 +12,5 @@ ENV NODE_ENV=production
 COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/apps/mcp/dist ./apps/mcp/dist
 WORKDIR /app/apps/mcp
+EXPOSE 4001
 CMD ["node","dist/index.js"]
