@@ -1,4 +1,4 @@
-import "dotenv/config"; import express from "express"; import cors from "cors"; import { z } from "zod"; import { migrate } from "./db.js"; import { dashboard, invokeTool, resetDemo, seedDemo, updateEvent, updateParticipant, resetParticipant, revealParticipantToken } from "./service.js"; import { isAdmin } from "./auth.js"; import { toolSchemas } from "./input.js";
+import "dotenv/config"; import express from "express"; import cors from "cors"; import { z } from "zod"; import { migrate } from "./db.js"; import { bootstrapLive, dashboard, invokeTool, resetDemo, seedDemo, updateEvent, updateParticipant, resetParticipant, revealParticipantToken } from "./service.js"; import { isAdmin } from "./auth.js"; import { toolSchemas } from "./input.js";
 const app = express(); app.use(cors({ origin: (process.env.CORS_ORIGIN ?? "http://localhost:3000").split(","), methods: ["GET", "POST"], allowedHeaders: ["Content-Type", "Authorization", "Idempotency-Key", "X-Admin-Key"] })); app.use(express.json({ limit: "100kb" }));
 const admin = (q: express.Request, r: express.Response, next: express.NextFunction) => isAdmin(q) ? next() : r.status(401).json({ error: "Admin key required." });
 const eventId = z.object({ eventId: z.literal("hedera-x402-demo") });
@@ -14,5 +14,5 @@ app.post("/internal/mcp/call", async (q, r, n) => { try { const parsed = call.pa
 app.use((err: unknown, _q: express.Request, r: express.Response, _n: express.NextFunction) => { const e = err as { message?: string; status?: number; issues?: unknown }; r.status(e.status ?? 400).json({ error: e.message ?? "Request failed", code: e.issues ? "INVALID_ARGUMENT" : undefined, details: e.issues }); });
 const port = Number(process.env.PORT ?? 4000);
 if (process.env.DEMO_MODE !== "true" && !process.env.HEDERA_RECIPIENT_ACCOUNT_ID) throw new Error("HEDERA_RECIPIENT_ACCOUNT_ID is required when DEMO_MODE is not true.");
-migrate().then(async () => { if (!await dashboard()) await resetDemo(); app.listen(port, () => console.log(`HackRails API listening on ${port}`)); }).catch(e => { console.error(e); process.exit(1); });
+migrate().then(async () => { if (!await dashboard()) { if (process.env.DEMO_MODE === "true") await resetDemo(); else await bootstrapLive(); } app.listen(port, () => console.log(`HackRails API listening on ${port}`)); }).catch(e => { console.error(e); process.exit(1); });
 export { toolSchemas };
