@@ -3,6 +3,7 @@ import { x402Client, x402HTTPClient } from "@x402/core/client";
 import { wrapFetchWithPayment } from "@x402/fetch";
 import { createClientHederaSigner, PrivateKey } from "@x402/hedera";
 import { ExactHederaScheme } from "@x402/hedera/exact/client";
+import { auditSubmission, validateProjectStrategy } from "@hackrails/shared";
 
 export const PAYMENT_REQUIRED = "PAYMENT-REQUIRED", PAYMENT_SIGNATURE = "PAYMENT-SIGNATURE", PAYMENT_RESPONSE = "PAYMENT-RESPONSE";
 const network = () => process.env.HEDERA_NETWORK ?? "hedera:testnet";
@@ -88,8 +89,11 @@ export async function invokePremiumProvider(tool: string, payload: Record<string
   return { result: body as Record<string, unknown>, paymentRequired, paymentResponse: settlementReceipt, settlementReceipt, paymentPayloadHash, transactionId: settlementReceipt.transaction ?? null, x402State: "PAYMENT_RESPONSE_RECORDED" };
 }
 
-export function demoPremiumResult(tool: string, payload: Record<string, unknown>, idempotencyKey: string): CanonicalPaymentFlow {
-  const result = tool === "validate_project_strategy" ? { tool, kind: "strategy_validation", verdict: "PROMISING", strengths: ["Organizer-sponsored access is differentiated", "USDC settlement is observable"], gaps: ["Make policy rejection visible", "Show participant invocation"], recommendedNext: "Run the submission audit after adding demo evidence.", payload } : { tool, kind: "submission_audit", ready: false, scorecard: { requirements: 78, evidence: 64, sponsorFit: 91 }, blockers: ["Add a deployed URL or recorded flow", "Attach USDC transaction evidence"], passed: ["Clear sponsor story", "MCP tools are constrained"], payload };
-  const receipt = { success: true, network: network(), scheme: "exact", transaction: `demo-x402-${idempotencyKey.slice(0, 18)}`, amount: null, asset: asset(), demo: true };
+export async function demoPremiumResult(tool: string, payload: Record<string, unknown>, idempotencyKey: string): Promise<CanonicalPaymentFlow> {
+  const result = tool === "validate_project_strategy"
+    ? { tool, kind: "strategy_validation", ...(await validateProjectStrategy(payload as unknown as Parameters<typeof validateProjectStrategy>[0])), payload }
+    : { tool, kind: "submission_audit", ...(await auditSubmission(payload as unknown as Parameters<typeof auditSubmission>[0])), payload };
+  const amount = tool === "audit_submission" ? "50000" : "10000";
+  const receipt = { success: true, network: network(), scheme: "exact", transaction: `demo-x402-${idempotencyKey.slice(0, 18)}`, amount, asset: asset(), demo: true };
   return { result, paymentRequired: null, paymentResponse: receipt, settlementReceipt: receipt, paymentPayloadHash: sha256({ demo: true, idempotencyKey, tool }), transactionId: receipt.transaction, x402State: "PAYMENT_RESPONSE_RECORDED" };
 }

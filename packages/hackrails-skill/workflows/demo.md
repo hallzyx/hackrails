@@ -10,18 +10,39 @@
 
 ```js
 const key = crypto.randomUUID();
-const request = {
-  name: "audit_submission",
+
+// Strategy validation
+const strategyRequest = {
+  name: "validate_project_strategy",
   arguments: {
-    summary: "Route planner with offline accessibility alerts",
-    repositoryUrl: "https://example.invalid/team/project",
-    idempotencyKey: key,
+    event_id: "hedera-x402-demo",
+    project_name: "My x402 Project",
+    project_summary: "What it does and how x402 is integrated",
+    problem: "The problem being solved",
+    target_users: "Who uses it",
+    selected_track: "Hedera x402 Bounty",
+    planned_integrations: ["x402", "Hedera"],
+    current_stage: "MVP",
   },
 };
+const strategyResult = await mcp.callTool(strategyRequest);
 
-const result = await mcp.callTool(request); // new premium request
+// Submission audit
+const auditRequest = {
+  name: "audit_submission",
+  arguments: {
+    event_id: "hedera-x402-demo",
+    project_name: "My x402 Project",
+    repository_url: "https://github.com/team/project",
+    selected_track: "Hedera x402 Bounty",
+    project_summary: "Project description for evaluation",
+    transaction_links: ["https://hashscan.io/testnet/transaction/0.0.xxx"],
+  },
+};
+const auditResult = await mcp.callTool(auditRequest);
+
 // On a timeout or transport failure only:
-const recovered = await mcp.callTool(request); // same key, replay/recovery
+const recovered = await mcp.callTool(auditRequest); // same key, replay/recovery
 ```
 
-Use a newly generated key for the next premium request. Read `recovered.structuredContent` (or `result.structuredContent`) for the original settlement record, then convert its gaps, blockers, recommended next actions, and scorecards into the team's checklist. Do not retry a policy rejection; escalate its message to the organizer.
+Use a newly generated key for the next premium request. Read `structuredContent` for the original settlement record, then convert its `risks`, `prioritized_actions`, `findings`, `fix_first`, and `final_recommendation` into the team's checklist. Do not retry a policy rejection; escalate its message to the organizer.

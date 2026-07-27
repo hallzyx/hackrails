@@ -1,0 +1,98 @@
+[
+  {
+    "id": "missing-demo-video",
+    "title": "Demo video missing",
+    "severity": "AUTO_DISQUALIFICATION",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "5-15_MIN",
+    "description": "The submission does not contain an accessible demo video."
+  },
+  {
+    "id": "video-over-time-limit",
+    "title": "Demo video exceeds time limit",
+    "severity": "AUTO_DISQUALIFICATION",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "5-15_MIN",
+    "description": "The demo video is longer than 5 minutes (300 seconds)."
+  },
+  {
+    "id": "missing-public-repository",
+    "title": "Repository is not public",
+    "severity": "AUTO_DISQUALIFICATION",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "5-15_MIN",
+    "description": "The GitHub repository is not publicly accessible."
+  },
+  {
+    "id": "missing-submission-form",
+    "title": "Submission form not completed",
+    "severity": "AUTO_DISQUALIFICATION",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "5-15_MIN",
+    "description": "The official Google submission form was not submitted."
+  },
+  {
+    "id": "missing-onchain-proof",
+    "title": "No public on-chain transaction evidence",
+    "severity": "CRITICAL",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "15-30_MIN",
+    "description": "No verifiable transaction on Hedera Testnet found via HashScan."
+  },
+  {
+    "id": "mainnet-used",
+    "title": "Mainnet transaction provided instead of Testnet",
+    "severity": "CRITICAL",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "15-30_MIN",
+    "description": "Transactions on mainnet are not accepted as evidence."
+  },
+  {
+    "id": "missing-402-demo",
+    "title": "Video does not show the HTTP 402 response",
+    "severity": "CRITICAL",
+    "requirement_type": "JUDGING_IMPACT",
+    "estimated_effort": "30-60_MIN",
+    "description": "The demo shows the final result but not the initial 402 response, payment payload, or retry cycle."
+  },
+  {
+    "id": "same-payer-receiver",
+    "title": "Payer and receiver are the same account",
+    "severity": "HIGH",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "5-15_MIN",
+    "description": "The payTo and payer accounts are identical, suggesting a self-paying transaction."
+  },
+  {
+    "id": "missing-readme",
+    "title": "README missing or insufficient",
+    "severity": "HIGH",
+    "requirement_type": "MANDATORY",
+    "estimated_effort": "15-30_MIN",
+    "description": "Repository lacks a README with project description and installation instructions."
+  },
+  {
+    "id": "missing-install-instructions",
+    "title": "No installation instructions",
+    "severity": "MEDIUM",
+    "requirement_type": "BEST_PRACTICE",
+    "estimated_effort": "15-30_MIN",
+    "description": "The README does not include steps to install and run the project locally."
+  },
+  {
+    "id": "generic-marketplace-wrapper",
+    "title": "Generic marketplace wrapper without differentiation",
+    "severity": "MEDIUM",
+    "requirement_type": "JUDGING_IMPACT",
+    "estimated_effort": "1-3_HOURS",
+    "description": "The project is a thin wrapper over x402 without a differentiated use case or value proposition."
+  },
+  {
+    "id": "no-license",
+    "title": "No open-source license",
+    "severity": "LOW",
+    "requirement_type": "BEST_PRACTICE",
+    "estimated_effort": "5-15_MIN",
+    "description": "The repository does not contain a license file, creating ambiguity about usage rights."
+  }
+]

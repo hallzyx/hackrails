@@ -4,8 +4,17 @@ import { createTimeoutFetch, demoPremiumResult, validatePaymentRequirements } fr
 
 process.env.HEDERA_RECIPIENT_ACCOUNT_ID = "0.0.7";
 
-test("demo mode retains a deterministic ledger receipt without custom HMAC payment proofs", () => {
-  const result = demoPremiumResult("validate_project_strategy", { idea: "test" }, "idem-123");
+test("demo mode retains a ledger receipt while running the real strategy analysis", async () => {
+  const result = await demoPremiumResult("validate_project_strategy", {
+    event_id: "hedera-x402-demo",
+    project_name: "Test Project",
+    project_summary: "An x402 payment project on Hedera.",
+    problem: "Agents need programmatic payments.",
+    target_users: "AI agents",
+    selected_track: "Hedera x402 Bounty",
+    planned_integrations: ["x402", "Hedera"],
+    current_stage: "MVP",
+  }, "idem-123");
   assert.equal(result.x402State, "PAYMENT_RESPONSE_RECORDED");
   assert.match(result.transactionId ?? "", /^demo-x402-/);
   assert.equal(result.paymentPayloadHash.length, 64);

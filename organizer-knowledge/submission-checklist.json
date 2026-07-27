@@ -1,0 +1,86 @@
+[
+  {
+    "id": "public-repository",
+    "label": "Public GitHub repository",
+    "required": true,
+    "severity_if_missing": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "readme",
+    "label": "README with project description",
+    "required": true,
+    "severity_if_missing": "HIGH"
+  },
+  {
+    "id": "install-instructions",
+    "label": "Installation instructions",
+    "required": true,
+    "severity_if_missing": "MEDIUM"
+  },
+  {
+    "id": "execution-instructions",
+    "label": "Execution / run instructions",
+    "required": true,
+    "severity_if_missing": "MEDIUM"
+  },
+  {
+    "id": "demo-video",
+    "label": "Demo video under five minutes",
+    "required": true,
+    "severity_if_missing": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "video-shows-402",
+    "label": "Video shows HTTP 402 initial response",
+    "required": true,
+    "severity_if_missing": "CRITICAL"
+  },
+  {
+    "id": "video-shows-payment",
+    "label": "Video shows payment payload and retry",
+    "required": true,
+    "severity_if_missing": "CRITICAL"
+  },
+  {
+    "id": "video-shows-response",
+    "label": "Video shows final resource response after payment",
+    "required": true,
+    "severity_if_missing": "HIGH"
+  },
+  {
+    "id": "hashscan-link",
+    "label": "HashScan link to Testnet transaction",
+    "required": true,
+    "severity_if_missing": "CRITICAL"
+  },
+  {
+    "id": "testnet-network",
+    "label": "Transaction on Hedera Testnet",
+    "required": true,
+    "severity_if_missing": "CRITICAL"
+  },
+  {
+    "id": "payer-receiver-different",
+    "label": "Payer and receiver are different accounts",
+    "required": true,
+    "severity_if_missing": "HIGH"
+  },
+  {
+    "id": "submission-form",
+    "label": "Completed submission form",
+    "required": true,
+    "severity_if_missing": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "x402-central",
+    "label": "x402 is central to the product (not decorative)",
+    "required": true,
+    "severity_if_missing": "MEDIUM"
+  },
+  {
+    "id": "license",
+    "label": "Open-source license",
+    "required": false,
+    "severity_if_missing": "LOW"
+  }
+]

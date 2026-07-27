@@ -17,9 +17,11 @@ const payTo = () => {
 };
 const facilitatorUrl = () => process.env.X402_FACILITATOR_URL ?? "https://api.testnet.blocky402.com";
 
-function result(tool: string, payload: Record<string, unknown>) {
-  if (tool === "validate_project_strategy") return { tool, kind: "strategy_validation", verdict: "PROMISING", strengths: ["Organizer-sponsored access is differentiated", "USDC settlement is observable"], gaps: ["Make policy rejection visible", "Show participant invocation"], recommendedNext: "Run the submission audit after adding demo evidence.", payload };
-  return { tool, kind: "submission_audit", ready: false, scorecard: { requirements: 78, evidence: 64, sponsorFit: 91 }, blockers: ["Add a deployed URL or recorded flow", "Attach USDC transaction evidence"], passed: ["Clear sponsor story", "MCP tools are constrained"], payload };
+import { validateProjectStrategy, auditSubmission } from "@hackrails/shared";
+
+async function result(tool: string, payload: Record<string, unknown>) {
+  if (tool === "validate_project_strategy") return { tool, kind: "strategy_validation", ...(await validateProjectStrategy(payload as unknown as Parameters<typeof validateProjectStrategy>[0])), payload };
+  return { tool, kind: "submission_audit", ...(await auditSubmission(payload as unknown as Parameters<typeof auditSubmission>[0])), payload };
 }
 
 function routes(): RoutesConfig {
@@ -55,7 +57,7 @@ export function createProvider() {
   let initialization: Promise<void> | undefined;
   app.use("/tools/:tool", async (_c, next) => { initialization ??= resourceServer.initialize(); await initialization; await next(); });
   app.use("*", paymentMiddleware(routes(), resourceServer, undefined, undefined, false));
-  app.post("/tools/:tool", async (c) => c.json(result(c.req.param("tool"), await c.req.json<Record<string, unknown>>() )));
+  app.post("/tools/:tool", async (c) => c.json(await result(c.req.param("tool"), await c.req.json<Record<string, unknown>>() )));
   return app;
 }
 

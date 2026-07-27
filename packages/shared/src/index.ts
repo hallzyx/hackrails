@@ -1,4 +1,6 @@
 ﻿export const EVENT_ID = "hedera-x402-demo";
+export { validateProjectStrategy, auditSubmission } from "./premium.js";
+export type { StrategyInput, AuditInput } from "./premium.js";
 export type EventStatus = "DRAFT" | "ACTIVE" | "PAUSED";
 export type UsageStatus = "PENDING" | "SETTLED" | "FAILED" | "REJECTED";
 export type ToolName = "get_event_guidance" | "validate_project_strategy" | "audit_submission";

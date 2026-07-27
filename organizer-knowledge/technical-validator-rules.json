@@ -1,0 +1,110 @@
+[
+  {
+    "id": "repo-public",
+    "category": "repository",
+    "check": "Repository URL is accessible and public",
+    "method": "HTTP HEAD request to repository URL; expect 200 or redirect to a public page",
+    "pass_condition": "URL resolves to a public GitHub repository",
+    "fail_condition": "URL returns 404, 403, or requires authentication",
+    "severity": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "repo-readme",
+    "category": "repository",
+    "check": "README.md file exists in repository root",
+    "method": "Check for README.md, README.txt, or readme in default branch",
+    "pass_condition": "At least one README file found",
+    "fail_condition": "No README file found",
+    "severity": "HIGH"
+  },
+  {
+    "id": "repo-install-instructions",
+    "category": "repository",
+    "check": "README contains installation instructions",
+    "method": "Search README content for keywords: install, setup, npm install, pip install, docker, make, build",
+    "pass_condition": "At least one installation keyword found in README",
+    "fail_condition": "No installation keywords found",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "repo-project-description",
+    "category": "repository",
+    "check": "README contains a project description",
+    "method": "Check if README has more than 200 characters of content",
+    "pass_condition": "README content exceeds minimum length",
+    "fail_condition": "README is empty or too short",
+    "severity": "HIGH"
+  },
+  {
+    "id": "hashscan-link-present",
+    "category": "onchain",
+    "check": "HashScan link present in README or submission",
+    "method": "Search for hashscan.io or hashscan URLs in provided links and README",
+    "pass_condition": "At least one HashScan URL found",
+    "fail_condition": "No HashScan URL found",
+    "severity": "CRITICAL"
+  },
+  {
+    "id": "testnet-network",
+    "category": "onchain",
+    "check": "Transaction is on Hedera Testnet",
+    "method": "Parse HashScan URL or transaction data for network=testnet",
+    "pass_condition": "Network is testnet",
+    "fail_condition": "Network is mainnet or unknown",
+    "severity": "CRITICAL"
+  },
+  {
+    "id": "transaction-success",
+    "category": "onchain",
+    "check": "Transaction has a successful status",
+    "method": "Query HashScan or mirror node API for transaction status",
+    "pass_condition": "Status is SUCCESS or equivalent",
+    "fail_condition": "Status is FAILED or unknown",
+    "severity": "CRITICAL"
+  },
+  {
+    "id": "payer-receiver-different",
+    "category": "onchain",
+    "check": "Payer and receiver accounts are different",
+    "method": "Compare payer_account_id and transfer recipient in transaction data",
+    "pass_condition": "Payer != receiver",
+    "fail_condition": "Payer == receiver",
+    "severity": "HIGH"
+  },
+  {
+    "id": "video-accessible",
+    "category": "video",
+    "check": "Demo video URL is accessible",
+    "method": "HTTP HEAD request to video URL",
+    "pass_condition": "URL returns 200 or is a known video platform (YouTube, Vimeo, Loom)",
+    "fail_condition": "URL returns 404 or is unreachable",
+    "severity": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "video-duration",
+    "category": "video",
+    "check": "Video duration is under 5 minutes (300 seconds)",
+    "method": "Parse video metadata or platform API for duration",
+    "pass_condition": "duration_seconds <= 300",
+    "fail_condition": "duration_seconds > 300 or unknown",
+    "severity": "AUTO_DISQUALIFICATION"
+  },
+  {
+    "id": "video-audio",
+    "category": "video",
+    "check": "Video has audio track",
+    "method": "Check video metadata for audio stream",
+    "pass_condition": "Audio track present",
+    "fail_condition": "No audio track or metadata unavailable",
+    "severity": "MEDIUM"
+  },
+  {
+    "id": "correct-asset",
+    "category": "onchain",
+    "check": "Settlement asset is HBAR or USDC",
+    "method": "Check token ID or transfer type in transaction data",
+    "pass_condition": "Asset matches HBAR (0.0.0) or known USDC token",
+    "fail_condition": "Asset is unknown or unsupported",
+    "severity": "HIGH"
+  }
+]

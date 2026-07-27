@@ -1,0 +1,60 @@
+[
+  {
+    "name": "Agent Payments Marketplace",
+    "summary": "Marketplace of APIs paid per call using x402 on Hedera",
+    "year": 2025,
+    "result": "finalist",
+    "technologies": ["x402", "Hedera", "USDC"],
+    "strengths": [
+      "Functional payment flow",
+      "Good documentation"
+    ],
+    "weaknesses": [
+      "Proposition too generic",
+      "No budget control visible",
+      "No policy enforcement"
+    ],
+    "organizer_feedback": [
+      "The integration worked, but the use case was not sufficiently differentiated"
+    ],
+    "feedback_source": "organizer_documented"
+  },
+  {
+    "name": "Pay-Per-Read DevDocs",
+    "summary": "Developer documentation gated behind micropayments via x402",
+    "year": 2025,
+    "result": "winner",
+    "technologies": ["x402", "Hedera", "HBAR"],
+    "strengths": [
+      "Clear pay-to-read model",
+      "Demonstrated full 402 cycle in video",
+      "HashScan evidence present"
+    ],
+    "weaknesses": [
+      "Limited to a single content type"
+    ],
+    "organizer_feedback": [
+      "The x402 flow was central to the product and clearly demonstrated"
+    ],
+    "feedback_source": "judge_public_statement"
+  },
+  {
+    "name": "AI Agent Toll Booth",
+    "summary": "Middleware that charges per inference call using x402 settlement",
+    "year": 2025,
+    "result": "semifinalist",
+    "technologies": ["x402", "Hedera", "USDC"],
+    "strengths": [
+      "Novel agent-per-query model",
+      "Real settlement on Testnet"
+    ],
+    "weaknesses": [
+      "No video showing the 402 response",
+      "README lacked installation instructions"
+    ],
+    "organizer_feedback": [
+      "Strong concept but submission was incomplete — missing video evidence of the payment cycle"
+    ],
+    "feedback_source": "organizer_documented"
+  }
+]

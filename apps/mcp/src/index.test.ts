@@ -8,7 +8,29 @@ import { createHttpServer } from "./server.js";
 test("each MCP tool rejects invalid arguments", () => {
   assert.equal(argumentsSchemas.get_event_guidance.safeParse({}).success, false);
   assert.equal(argumentsSchemas.validate_project_strategy.safeParse({ idea: "x", extra: true }).success, false);
-  assert.equal(argumentsSchemas.audit_submission.safeParse({ repositoryUrl: "not-a-url", summary: "x" }).success, false);
+  assert.equal(argumentsSchemas.validate_project_strategy.safeParse({
+    event_id: "test", project_name: "x", project_summary: "x", problem: "x",
+    target_users: "x", selected_track: "x", planned_integrations: ["x"],
+    current_stage: "IDEA", extra: true,
+  }).success, false);
+  assert.equal(argumentsSchemas.audit_submission.safeParse({
+    event_id: "test", project_name: "x", repository_url: "",
+    selected_track: "x", project_summary: "x",
+  }).success, false);  // empty repository_url rejected by min(1)
+  assert.equal(argumentsSchemas.audit_submission.safeParse({
+    event_id: "test", project_name: "x", repository_url: "https://github.com/test/repo",
+    selected_track: "x", project_summary: "x", transaction_links: [], extra: true,
+  }).success, false);
+});
+
+test("validate_project_strategy accepts valid input", () => {
+  const result = argumentsSchemas.validate_project_strategy.safeParse({
+    event_id: "hedera-x402-demo", project_name: "HackRails", project_summary: "Sponsored MCP tools",
+    problem: "Teams lack organizer intelligence", target_users: "Hackathon participants",
+    selected_track: "Hedera", planned_integrations: ["x402", "Hedera"],
+    current_stage: "MVP",
+  });
+  assert.equal(result.success, true);
 });
 
 test("event guidance discovery describes the official-event-only scope", () => {

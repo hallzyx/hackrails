@@ -62,12 +62,12 @@ export function createMcpServer() {
   }, (args, extra) => invokeTool("get_event_guidance", args, extra));
 
   server.registerTool("validate_project_strategy", {
-    description: "Use premium organizer intelligence to validate a project strategy.",
+    description: "Use premium organizer intelligence to validate a project strategy against official rules, judging criteria, sponsor objectives, previous projects, and rejection patterns. Returns strategic fit scores, risks, historical overlap, and prioritized actions.",
     inputSchema: argumentsSchemas.validate_project_strategy,
   }, (args, extra) => invokeTool("validate_project_strategy", args, extra));
 
   server.registerTool("audit_submission", {
-    description: "Run a premium audit for requirements, evidence and blockers.",
+    description: "Run a premium audit for submission readiness, checking repository, x402 flow evidence, on-chain proof, video requirements, and organizer checklist compliance. Returns readiness score, findings, and fix-first plan.",
     inputSchema: argumentsSchemas.audit_submission,
   }, (args, extra) => invokeTool("audit_submission", args, extra));
 

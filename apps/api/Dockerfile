@@ -18,5 +18,7 @@ COPY --from=build /app/apps/api/dist ./apps/api/dist
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/shared/package.json ./packages/shared/package.json
 COPY --from=build /app/db ./db
+COPY --from=build /app/organizer-knowledge ./organizer-knowledge
+COPY --from=build /app/packages/hackrails-skill ./packages/hackrails-skill
 WORKDIR /app/apps/api
 CMD ["node","dist/index.js"]
