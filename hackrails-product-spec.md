@@ -309,7 +309,7 @@ Organizer knowledge
 
 Sponsored budget:       100.00 USDC
 Per-team allowance:       0.20 USDC
-Daily team limit:         0.10 USDC
+Daily team limit:         0.13 USDC (sum of all premium tool allowances)
 
 [ Enable participant MCP ]
 ```
@@ -752,7 +752,7 @@ Configuración demo recomendada:
 ```text
 Event budget:              100.00 USDC
 Per-team allowance:          0.20 USDC
-Daily team limit:            0.10 USDC
+Daily team limit:            0.13 USDC (3 × 0.01 + 2 × 0.05)
 
 validate_project_strategy
 Price:                       0.01 USDC
@@ -770,7 +770,7 @@ Presupuesto global
     ↓
 Cuota por equipo
     ↓
-Límite diario
+    Límite diario agregado de llamadas premium
     ↓
 Límite por herramienta
 ```

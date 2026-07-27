@@ -1,22 +1,196 @@
-# HackRails MVP
-HackRails is a production-shaped MVP for organizer-sponsored remote MCP tools. The API owns policy, PostgreSQL ledger access, participant tokens, and Hedera credentials; browser and MCP clients never receive wallet credentials.
+# HackRails
 
-## Local and Docker
-Copy `.env.example` to `.env`, set a local `DEMO_ADMIN_KEY`, then run `npm install`, `npm run seed`, and `npm run dev`. Docker runs `docker compose up --build` with PostgreSQL (5432), web (3000), API/Sponsor Gateway (4000), MCP (4001), and the internal premium provider (4002). Every service has a health endpoint or Docker healthcheck.
+HackRails is an organizer-sponsored platform for remote MCP tools. Participants use official event knowledge, strategy validation, and submission audits from Codex, Claude Code, Cursor, or another MCP-compatible agent without managing wallets. The organizer controls access, policy, sponsorship, and observability.
 
-## HTTP-visible x402 flow
-Premium tools use a separate provider at `POST /tools/:tool` protected by the canonical x402 v2 Hono middleware. The provider is a resource server using `@x402/core/server`, `@x402/hedera/exact/server`, `HTTPFacilitatorClient`, and `@x402/hono`; it has no Hedera private key. The API is the buyer/sponsor and uses the organizer Hedera key with `@x402/core/client`, `@x402/fetch`, and the Hedera exact client. The canonical Base64 `PAYMENT-REQUIRED`, `PAYMENT-SIGNATURE`, and `PAYMENT-RESPONSE` headers are handled by the x402 libraries.
+The API is the policy and payment authority. PostgreSQL is the usage ledger. The API is the only service allowed to use the organizer Hedera private key; browsers, MCP clients, and the premium provider never receive it.
 
-Set `X402_FACILITATOR_URL`, `HEDERA_NETWORK` (default `hedera:testnet`), the USDC HTS asset (default `0.0.429274`), and a provider recipient account. The usage ledger stores the payment payload hash and facilitator settlement receipt on the existing `usage_records` row. A premium call is only marked `SETTLED` after the canonical x402 response reports successful settlement. The existing idempotency key is retained as the application replay guard.
+## Start here
 
-## Hedera USDC
-`DEMO_MODE=true` keeps deterministic non-chain ledger receipts for the existing product demo without the former HMAC proof protocol. Set `DEMO_MODE=false` plus `HEDERA_ACCOUNT_ID`, `HEDERA_PRIVATE_KEY`, `HEDERA_RECIPIENT_ACCOUNT_ID`, and a Hedera-capable facilitator to execute canonical Testnet HTS USDC x402 settlement. Private keys remain API-only.
+### Fastest local demo
 
-## Ledger and dashboard
-Premium calls atomically reserve event, participant, daily, and per-tool quota before payment. Policy rejections are logged as `REJECTED` without quota or payment; failures are `FAILED`; successful calls are `SETTLED`. Seeded history is a closed session that stays visible in dashboard totals and transaction history while live participant quotas remain clean. The dashboard reports usage by tool/rate, average cost per participant, calls per team, failed payments, policy rejections, budget, calls, impact, transaction IDs, HashScan links, and x402 state.
+Prerequisites: Node.js 22+, npm 10+, Docker Engine, and Docker Compose v2.
 
-## Agent skill
-`packages/skill/SKILL.md` and `packages/skill/workflows/demo.md` cover preflight, missing input, sponsored-premium explanation, tool selection, idempotency, and structured-result interpretation.
+```bash
+cp .env.example .env
+npm install
+docker compose up --build -d --wait
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Set a local admin key in `.env` before starting:
+
+```dotenv
+DEMO_ADMIN_KEY=use-a-local-demo-key
+DEMO_MODE=true
+```
+
+Open:
+
+- Admin dashboard: http://localhost:3000/
+- Participant dashboard: http://localhost:3000/team
+- API health: http://localhost:4000/health
+- MCP health: http://localhost:4001/health
+- Provider health: http://localhost:4002/health
+
+For the complete setup, troubleshooting, and local Node workflow, read [Getting Started](docs/GETTING_STARTED.md).
+
+## Documentation index
+
+README is the entry point. Continue with the document that matches the work you are doing:
+
+| Document | Use it when you need to… |
+| --- | --- |
+| [Architecture](docs/ARCHITECTURE.md) | Understand services, trust boundaries, request flows, and data ownership |
+| [Getting Started](docs/GETTING_STARTED.md) | Install, start, verify, and troubleshoot a local stack |
+| [Configuration](docs/CONFIGURATION.md) | Configure demo mode, live mode, services, and secrets |
+| [MCP and Agent Skill](docs/MCP_AND_AGENT_SKILL.md) | Connect a coding agent and understand the available tools |
+| [x402 and Hedera](docs/X402_HEDERA.md) | Enable or debug canonical Testnet settlement |
+| [Operations](docs/OPERATIONS.md) | Run resets, seed activity, inspect logs, and operate the demo |
+| [Testing](docs/TESTING.md) | Run automated checks and the manual smoke test |
+| [Security](docs/SECURITY.md) | Review credential boundaries and production hardening |
+| [Product specification](hackrails-product-spec.md) | Read the detailed product, UX, architecture, and MVP decisions |
+
+## Product model
+
+HackRails combines five capabilities:
+
+1. **Organizer knowledge** — official rules, judging criteria, sponsor objectives, clarifications, and rejection patterns in `organizer-knowledge/`.
+2. **Agent Skill** — free workflow instructions in `packages/hackrails-skill/`.
+3. **Remote MCP** — participant-facing tools at `POST /mcp` on port 4001.
+4. **Sponsor Gateway** — API authentication, quota reservation, validation, ledger, and x402 buyer flow on port 4000.
+5. **Hedera settlement** — canonical x402 exact USDC settlement through the provider on port 4002.
+
+Participants consume sponsored capabilities. They do not pay, sign transactions, or receive private wallet credentials.
+
+## Available tools
+
+| Tool | Type | Purpose | Current policy |
+| --- | --- | --- | --- |
+| `get_event_guidance` | Free | Official event rules, sources, dates, tracks, and submission requirements | Unlimited in the current catalog |
+| `validate_project_strategy` | Premium | Validate project fit against organizer knowledge and sponsor objectives | 3 calls/team at `0.01 USDC` |
+| `audit_submission` | Premium | Audit repository evidence, criteria, and submission blockers | 2 calls/team at `0.05 USDC` |
+
+The current aggregate premium allowance is:
+
+```text
+3 × 0.01 USDC + 2 × 0.05 USDC = 0.13 USDC per team/day
+```
+
+Policy is enforced before payment. A rejection is recorded as `REJECTED` with no quota consumption and no payment. A successful premium call is `SETTLED` only after the x402 facilitator reports successful settlement.
+
+Tool price and quota editing is not yet exposed in the admin UI. See the configuration caveat in [Architecture](docs/ARCHITECTURE.md#current-configuration-caveat) before changing catalog values manually.
+
+## Runtime topology
+
+```text
+Participant agent
+        │ MCP + bearer token
+        ▼
+Remote MCP server :4001
+        │ internal API request
+        ▼
+API / Sponsor Gateway :4000 ───── PostgreSQL :5432
+        │ premium x402 request
+        ▼
+Premium provider :4002 ───── x402 facilitator ───── Hedera Testnet
+```
+
+The web dashboard runs on port 3000 and talks to the API. See [Architecture](docs/ARCHITECTURE.md) for the complete flow and trust model.
+
+## Demo mode and live mode
+
+### Demo mode
+
+`DEMO_MODE=true` uses deterministic local receipts. It is safe for UI review, local development, and automated tests. It does not create blockchain transactions.
+
+### Live mode
+
+`DEMO_MODE=false` enables canonical x402 Testnet settlement and requires:
+
+```dotenv
+HEDERA_ACCOUNT_ID=0.0.x
+HEDERA_PRIVATE_KEY=...
+HEDERA_RECIPIENT_ACCOUNT_ID=0.0.y
+```
+
+The private key stays API-only. Read [x402 and Hedera](docs/X402_HEDERA.md) before enabling live mode.
+
+## Repository map
+
+```text
+apps/
+  api/        API, policy engine, PostgreSQL access, x402 buyer
+  mcp/        Remote MCP transport and API forwarding
+  provider/   x402 resource server and premium execution
+  web/        Admin and participant dashboards
+packages/
+  shared/             Shared types and premium validators
+  hackrails-skill/   Agent Skill and participant workflows
+organizer-knowledge/ Curated organizer sources
+db/init/              PostgreSQL schema and indexes
+docs/                 Maintainer and user documentation
+```
+
+## Development commands
+
+```bash
+npm install
+npm run dev
+npm run seed
+npm run typecheck
+npm run test
+npm run test -w @hackrails/mcp
+npm run build
+docker compose config --quiet
+```
+
+`npm run dev` starts API, provider, MCP, and web concurrently. `npm run seed` resets the local demo database and requires `DEMO_MODE=true`.
+
+## Project status and scope
+
+The repository is a production-shaped MVP. The current scope includes:
+
+- organizer-backed strategy and submission validators;
+- participant bearer access and dashboard;
+- free and premium MCP tools;
+- deterministic demo receipts;
+- canonical Hedera x402 buyer/provider flow;
+- usage reservations, idempotency, failure recovery, and dashboard metrics;
+- downloadable Agent Skill and MCP import configurations.
+
+The current MVP does not include:
+
+- multi-organizer identity and role management;
+- production secret management, TLS, rate limiting, or backup automation;
+- video validation;
+- admin editing of tool prices and quotas;
+- event-scoped tool catalogs.
+
+Intentional limitations and future work should be recorded in the product specification or a focused document under `docs/`.
 
 ## Verification
-Run `npm run typecheck`, `npm run test`, `npm run build`, and `docker compose config --quiet`.
+
+Before opening a pull request or demoing a change:
+
+```bash
+npm run typecheck
+npm run test
+npm run test -w @hackrails/mcp
+npm run build
+docker compose config --quiet
+```
+
+Then run the manual smoke test in [Testing](docs/TESTING.md) and inspect `docker compose ps`.
+
+## Documentation conventions
+
+- Keep README as the navigation index and high-level contract.
+- Put detailed operational or architectural material in `docs/`.
+- Keep product decisions in `hackrails-product-spec.md`.
+- Keep event-specific source material in `organizer-knowledge/`.
+- Update links and verification commands when runtime behavior changes.
