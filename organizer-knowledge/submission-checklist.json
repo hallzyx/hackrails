@@ -2,84 +2,98 @@
   {
     "id": "public-repository",
     "label": "Public GitHub repository",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "AUTO_DISQUALIFICATION"
   },
   {
     "id": "readme",
     "label": "README with project description",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "HIGH"
   },
   {
     "id": "install-instructions",
     "label": "Installation instructions",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "MEDIUM"
   },
   {
     "id": "execution-instructions",
     "label": "Execution / run instructions",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "MEDIUM"
   },
   {
     "id": "demo-video",
     "label": "Demo video under five minutes",
+    "scope": "submission",
     "required": true,
     "severity_if_missing": "AUTO_DISQUALIFICATION"
   },
   {
     "id": "video-shows-402",
     "label": "Video shows HTTP 402 initial response",
+    "scope": "submission",
     "required": true,
     "severity_if_missing": "CRITICAL"
   },
   {
     "id": "video-shows-payment",
     "label": "Video shows payment payload and retry",
+    "scope": "submission",
     "required": true,
     "severity_if_missing": "CRITICAL"
   },
   {
     "id": "video-shows-response",
     "label": "Video shows final resource response after payment",
+    "scope": "submission",
     "required": true,
     "severity_if_missing": "HIGH"
   },
   {
     "id": "hashscan-link",
     "label": "HashScan link to Testnet transaction",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "CRITICAL"
   },
   {
     "id": "testnet-network",
     "label": "Transaction on Hedera Testnet",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "CRITICAL"
   },
   {
     "id": "payer-receiver-different",
     "label": "Payer and receiver are different accounts",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "HIGH"
   },
   {
     "id": "submission-form",
     "label": "Completed submission form",
+    "scope": "submission",
     "required": true,
     "severity_if_missing": "AUTO_DISQUALIFICATION"
   },
   {
     "id": "x402-central",
     "label": "x402 is central to the product (not decorative)",
+    "scope": "audit",
     "required": true,
     "severity_if_missing": "MEDIUM"
   },
   {
     "id": "license",
     "label": "Open-source license",
+    "scope": "audit",
     "required": false,
     "severity_if_missing": "LOW"
   }

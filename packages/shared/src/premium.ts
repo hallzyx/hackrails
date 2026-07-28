@@ -34,11 +34,13 @@ interface PreviousProject {
   technologies: string[]; strengths: string[]; weaknesses: string[];
   organizer_feedback: string[]; feedback_source: FeedbackSource;
 }
-interface RejectionPattern {
-  id: string; title: string; severity: string; requirement_type: string;
-  estimated_effort: string; description: string;
+interface ChecklistItem {
+  id: string;
+  label: string;
+  required: boolean;
+  severity_if_missing: string;
+  scope: "audit" | "submission";
 }
-interface ChecklistItem { id: string; label: string; required: boolean; severity_if_missing: string; }
 
 export interface StrategyInput {
   event_id: string; project_name: string; project_summary: string;
@@ -61,7 +63,6 @@ function loadEventRules(): string { return readMd("event-rules.md"); }
 function loadJudgingCriteria(): string { return readMd("judging-criteria.md"); }
 function loadSponsorObjectives(): string { return readMd("sponsor-objectives.md"); }
 function loadPreviousProjects(): PreviousProject[] { return readJson<PreviousProject[]>("previous-projects.json"); }
-function loadRejectionPatterns(): RejectionPattern[] { return readJson<RejectionPattern[]>("rejection-patterns.json"); }
 function loadSubmissionChecklist(): ChecklistItem[] { return readJson<ChecklistItem[]>("submission-checklist.json"); }
 
 // ---- Text similarity ----
@@ -284,7 +285,6 @@ export async function validateProjectStrategy(input: StrategyInput) {
 // ---- audit_submission (with REAL HTTP validation) ----
 
 export async function auditSubmission(input: AuditInput) {
-  loadRejectionPatterns();
   const checklist = loadSubmissionChecklist();
 
   const findings: Array<{
@@ -406,7 +406,9 @@ export async function auditSubmission(input: AuditInput) {
   }
 
   // ---- Readiness score ----
-  const totalChecks = checklist.filter((c) => c.required).length + 2;
+  const totalChecks = checklist.filter(
+    (c) => c.required && c.scope === "audit",
+  ).length + 2;
   const readinessScore = Math.max(0, Math.round((passed / totalChecks) * 100));
 
   // ---- Status ----

@@ -67,7 +67,7 @@ export function createMcpServer() {
   }, (args, extra) => invokeTool("validate_project_strategy", args, extra));
 
   server.registerTool("audit_submission", {
-    description: "Run a premium audit for submission readiness, checking repository, x402 flow evidence, on-chain proof, video requirements, and organizer checklist compliance. Returns readiness score, findings, and fix-first plan.",
+    description: "Run a premium audit for submission readiness, checking repository, x402 flow evidence, on-chain proof, and in-scope organizer checklist items. Video review is outside this tool's scope. Returns readiness score, findings, and fix-first plan.",
     inputSchema: argumentsSchemas.audit_submission,
   }, (args, extra) => invokeTool("audit_submission", args, extra));
 

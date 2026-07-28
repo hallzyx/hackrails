@@ -255,14 +255,13 @@ function McpConfigModal({
     opencode: JSON.stringify(
       {
         mcp: {
-          servers: {
-            hackrails: {
-              type: "remote",
-              url: "http://localhost:4001/mcp",
-              enabled: true,
-              headers: { Authorization: "Bearer " + token },
-              timeout: 90000,
-            },
+          hackrails: {
+            type: "remote",
+            url: "http://localhost:4001/mcp",
+            enabled: true,
+            oauth: false,
+            headers: { Authorization: "Bearer " + token },
+            timeout: 90000,
           },
         },
       },
@@ -294,7 +293,7 @@ function McpConfigModal({
       null,
       2,
     ),
-    codex: `[mcp_servers.hackrails]\nurl = "http://localhost:4001/mcp"\nbearer_token_env_var = "Bearer ${token}"\nenabled = true\nstartup_timeout_sec = 20\ntool_timeout_sec = 90`,
+    codex: `[mcp_servers.hackrails]\nurl = "http://localhost:4001/mcp"\nbearer_token_env_var = "HACKRAILS_TOKEN"\nenabled = true\nstartup_timeout_sec = 20\ntool_timeout_sec = 90`,
   };
   const labels = {
     opencode: "OpenCode",
@@ -329,6 +328,17 @@ function McpConfigModal({
           <pre className="max-h-96 overflow-auto border border-line bg-black p-4 text-xs leading-5 text-mint">
             {configs[activeTab]}
           </pre>
+          {activeTab === "codex" && (
+            <div className="mb-4">
+              <p className="mb-2 text-xs leading-5 text-smoke">
+                Set this system environment variable before starting Codex.
+                Keep the token out of <code>config.toml</code>.
+              </p>
+              <pre className="overflow-auto border border-line bg-black p-3 text-xs leading-5 text-amber">
+                {"HACKRAILS_TOKEN=" + (token || "<participant-token>")}
+              </pre>
+            </div>
+          )}
           <Button variant="mint" onClick={copy}>
             <Copy size={13} className="mr-1 inline" />
             Copy config

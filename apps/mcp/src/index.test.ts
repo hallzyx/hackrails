@@ -40,6 +40,13 @@ test("event guidance discovery describes the official-event-only scope", () => {
   assert.match(guidance.description, /does not validate project strategy/i);
 });
 
+test("audit discovery keeps video review outside the tool scope", () => {
+  const audit = toolCatalog.find((tool) => tool.name === "audit_submission");
+  assert.ok(audit);
+  assert.match(audit.description, /video review is outside this tool's scope/i);
+  assert.doesNotMatch(audit.description, /video requirements/i);
+});
+
 test("serves the Streamable HTTP MCP lifecycle", async (t) => {
   const httpServer = createServer(createHttpServer());
   httpServer.listen(0);

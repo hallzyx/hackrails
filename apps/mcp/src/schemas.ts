@@ -11,7 +11,7 @@ export const toolCatalog = [
   },
   {
     name: "audit_submission",
-    description: "Run a premium audit for submission readiness, checking repository, x402 flow evidence, on-chain proof, video requirements, and organizer checklist compliance.",
+    description: "Run a premium audit for submission readiness, checking repository, x402 flow evidence, on-chain proof, and in-scope organizer checklist items. Video review is outside this tool's scope.",
   },
 ] as const;
 

@@ -139,7 +139,7 @@ export default function DashboardPage() {
         BOOTING CONTROL PLANE… {message}
       </main>
     );
-  const { event, metrics, participants, transactions, tools } = data;
+  const { demoMode, event, metrics, participants, transactions, tools } = data;
   if (participantMode)
     return (
       <ParticipantDashboard
@@ -151,14 +151,13 @@ export default function DashboardPage() {
     opencode: JSON.stringify(
       {
         mcp: {
-          servers: {
-            hackrails: {
-              type: "remote",
-              url: "http://localhost:4001/mcp",
-              enabled: true,
-              headers: { Authorization: "Bearer " + participantToken },
-              timeout: 90000,
-            },
+          hackrails: {
+            type: "remote",
+            url: "http://localhost:4001/mcp",
+            enabled: true,
+            oauth: false,
+            headers: { Authorization: "Bearer " + participantToken },
+            timeout: 90000,
           },
         },
       },
@@ -191,9 +190,7 @@ export default function DashboardPage() {
       2,
     ),
     codex:
-      '[mcp_servers.hackrails]\nurl = "http://localhost:4001/mcp"\nbearer_token_env_var = "Bearer ' +
-      participantToken +
-      '"\nenabled = true\nstartup_timeout_sec = 20\ntool_timeout_sec = 90',
+      '[mcp_servers.hackrails]\nurl = "http://localhost:4001/mcp"\nbearer_token_env_var = "HACKRAILS_TOKEN"\nenabled = true\nstartup_timeout_sec = 20\ntool_timeout_sec = 90',
   };
   const reveal = async (id: string) => {
     setBusy(id);
@@ -260,22 +257,26 @@ export default function DashboardPage() {
             <Terminal size={13} className="mr-1 inline" />
             Participant
           </Button>
-          <Button
-            variant="ghost"
-            onClick={() => post("/api/admin/demo/reset")}
-            disabled={!!busy}
-          >
-            <RotateCcw size={13} className="mr-1 inline" />
-            Reset
-          </Button>
-          <Button
-            variant="amber"
-            onClick={() => post("/api/admin/demo/seed")}
-            disabled={!!busy}
-          >
-            <DatabaseZap size={13} className="mr-1 inline" />
-            Seed activity
-          </Button>
+          {demoMode && (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => post("/api/admin/demo/reset")}
+                disabled={!!busy}
+              >
+                <RotateCcw size={13} className="mr-1 inline" />
+                Reset
+              </Button>
+              <Button
+                variant="amber"
+                onClick={() => post("/api/admin/demo/seed")}
+                disabled={!!busy}
+              >
+                <DatabaseZap size={13} className="mr-1 inline" />
+                Seed activity
+              </Button>
+            </>
+          )}
         </div>
       </header>
       <div className="mx-auto max-w-7xl px-5">
@@ -583,6 +584,18 @@ export default function DashboardPage() {
               <pre className="mb-4 max-h-64 overflow-auto border border-line bg-black p-4 text-xs leading-5 text-mint">
                 {mcpConfigs[activeMcpTab]}
               </pre>
+              {activeMcpTab === "codex" && (
+                <div className="mb-4">
+                  <p className="mb-2 text-xs leading-5 text-smoke">
+                    Set this system environment variable before starting Codex.
+                    Keep the token out of <code>config.toml</code>.
+                  </p>
+                  <pre className="overflow-auto border border-line bg-black p-3 text-xs leading-5 text-amber">
+                    {"HACKRAILS_TOKEN=" +
+                      (participantToken || "<participant-token>")}
+                  </pre>
+                </div>
+              )}
               <Button
                 variant="mint"
                 onClick={() => {

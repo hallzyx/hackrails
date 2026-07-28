@@ -313,6 +313,7 @@ export async function dashboard(eventId = EVENT_ID) {
     m = deriveDashboardMetrics(rows, +e.spent_budget, pr.rows.length),
     settled = rows.filter((r: any) => r.status === "SETTLED");
   return {
+    demoMode: process.env.DEMO_MODE === "true",
     event: {
       id: e.id,
       name: e.name,
