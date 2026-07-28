@@ -80,6 +80,21 @@ export default function DashboardPage() {
   const call = async (tool: ToolName) => {
     setBusy(tool);
     setMessage("");
+    const liveAuditLinks =
+      data?.transactions
+        .map((transaction) => transaction.hashscanUrl)
+        .filter((url): url is string => Boolean(url)) ?? [];
+    if (
+      tool === "audit_submission" &&
+      !data?.demoMode &&
+      liveAuditLinks.length === 0
+    ) {
+      setMessage(
+        "Live audit requires a real HashScan transaction before it can run.",
+      );
+      setBusy("");
+      return;
+    }
     try {
       const r = await fetch(api + "/internal/mcp/call", {
         method: "POST",
@@ -112,7 +127,7 @@ export default function DashboardPage() {
                     selected_track: "hedera-x402-bounty",
                     project_summary:
                       "A sponsored agent toolkit using x402 and Hedera.",
-                    transaction_links: [],
+                    transaction_links: data?.demoMode ? [] : liveAuditLinks,
                   }
                 : { question: "What evidence should our team prepare?" },
         }),
@@ -140,6 +155,9 @@ export default function DashboardPage() {
       </main>
     );
   const { demoMode, event, metrics, participants, transactions, tools } = data;
+  const auditEvidenceLinks = transactions
+    .map((transaction) => transaction.hashscanUrl)
+    .filter((url): url is string => Boolean(url));
   if (participantMode)
     return (
       <ParticipantDashboard
@@ -367,6 +385,12 @@ export default function DashboardPage() {
               <h3 className="mt-1 font-display text-2xl uppercase">
                 Run the sponsored flow
               </h3>
+              {!demoMode && auditEvidenceLinks.length === 0 && (
+                <p className="mt-2 text-xs leading-5 text-amber">
+                  Live audit is available after a real HashScan transaction is
+                  recorded. This prevents charging for an incomplete sample.
+                </p>
+              )}
             </div>
             <div className="divide-y divide-line">
               {tools.map((t) => (
@@ -390,11 +414,20 @@ export default function DashboardPage() {
                   <Button
                     variant={t.type === "FREE" ? "ghost" : "mint"}
                     disabled={
-                      !!busy || event.status !== "ACTIVE" || !participantToken
+                      !!busy ||
+                      event.status !== "ACTIVE" ||
+                      !participantToken ||
+                      (t.name === "audit_submission" &&
+                        !demoMode &&
+                        auditEvidenceLinks.length === 0)
                     }
                     onClick={() => call(t.name)}
                   >
-                    Run {t.price ? usd(t.price) : "free"}
+                    {t.name === "audit_submission" &&
+                    !demoMode &&
+                    auditEvidenceLinks.length === 0
+                      ? "Needs HashScan evidence"
+                      : `Run ${t.price ? usd(t.price) : "free"}`}
                   </Button>
                 </div>
               ))}
