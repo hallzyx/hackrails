@@ -6,7 +6,14 @@ const { createProvider } = await import("./index.js");
 
 test("provider exposes a canonical x402 v2 payment challenge without a provider key", async () => {
   delete process.env.HEDERA_PRIVATE_KEY;
-  const response = await createProvider().request("http://localhost/tools/validate_project_strategy", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ idea: "test" }) });
+  const response = await createProvider().request(
+    "http://localhost/tools/validate_project_strategy",
+    {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ idea: "test" }),
+    },
+  );
   assert.equal(response.status, 402);
   const challenge = response.headers.get("PAYMENT-REQUIRED");
   assert.ok(challenge);
@@ -17,7 +24,6 @@ test("provider exposes a canonical x402 v2 payment challenge without a provider 
   assert.equal(decoded.accepts[0].asset, "0.0.429274");
 });
 
-
 test("provider fails closed without a recipient outside demo mode", () => {
   const previousDemoMode = process.env.DEMO_MODE;
   const previousRecipient = process.env.HEDERA_RECIPIENT_ACCOUNT_ID;
@@ -26,7 +32,10 @@ test("provider fails closed without a recipient outside demo mode", () => {
   try {
     assert.throws(() => createProvider(), /HEDERA_RECIPIENT_ACCOUNT_ID/);
   } finally {
-    if (previousDemoMode === undefined) delete process.env.DEMO_MODE; else process.env.DEMO_MODE = previousDemoMode;
-    if (previousRecipient === undefined) delete process.env.HEDERA_RECIPIENT_ACCOUNT_ID; else process.env.HEDERA_RECIPIENT_ACCOUNT_ID = previousRecipient;
+    if (previousDemoMode === undefined) delete process.env.DEMO_MODE;
+    else process.env.DEMO_MODE = previousDemoMode;
+    if (previousRecipient === undefined)
+      delete process.env.HEDERA_RECIPIENT_ACCOUNT_ID;
+    else process.env.HEDERA_RECIPIENT_ACCOUNT_ID = previousRecipient;
   }
 });

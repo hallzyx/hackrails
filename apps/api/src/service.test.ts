@@ -1,9 +1,173 @@
-import test from "node:test"; import assert from "node:assert/strict"; import { getEventGuidanceResponse, premiumDailyLimit, reservationAllowed, replay, reservationTimeoutMs } from "./service.js"; import { isAdmin } from "./auth.js"; import { toolSchemas } from "./input.js";
-test("pending premium reservations consume tool, participant, daily, and event capacity", () => { assert.equal(reservationAllowed({ existingCalls: 2, maxCalls: 3, participantSpent: .05, participantReserved: .05, participantAllocation: .2, dailySpend: .1, dailyLimit: .1, eventSpent: 1, eventReserved: 0, eventBudget: 100, price: .05 }), false); });
-test("reservation policy leaves capacity for a valid first premium call", () => { assert.equal(reservationAllowed({ existingCalls: 0, maxCalls: 3, participantSpent: 0, participantReserved: 0, participantAllocation: .2, dailySpend: 0, dailyLimit: .1, eventSpent: 0, eventReserved: 0, eventBudget: 100, price: .01 }), true); });
-test("daily sponsorship cap matches the total premium tool allowance", () => { assert.equal(premiumDailyLimit(), .13); assert.equal(reservationAllowed({ existingCalls: 1, maxCalls: 2, participantSpent: .06, participantReserved: 0, participantAllocation: .2, dailySpend: .06, dailyLimit: premiumDailyLimit(), eventSpent: .06, eventReserved: 0, eventBudget: 100, price: .05 }), true); });
-test("reservation timeout accepts positive milliseconds and falls back safely", () => { assert.equal(reservationTimeoutMs("1200"),1200);assert.equal(reservationTimeoutMs("0"),300000); });
-test("idempotent replay returns original response and transaction details", () => { const result = replay({ id: "use_1", price: ".01", transaction_id: "tx_1", hashscan_url: "https://hashscan/tx_1", result_payload: { verdict: "PROMISING" } }); assert.deepEqual(result, { verdict: "PROMISING", transaction: { id: "use_1", amount: .01, transactionId: "tx_1", hashscanUrl: "https://hashscan/tx_1", mode: "DEMO_MODE" }, idempotentReplay: true }); });
-test("event guidance returns the canonical organizer-backed brief and preserves the caller question", () => { const result = getEventGuidanceResponse({ question: "What must my submission include?" }); assert.equal(result.question, "What must my submission include?"); assert.equal(result.payload.question, "What must my submission include?"); assert.equal(result.sources.eventBrief, "https://hedera.com/x402-bounty/"); assert.equal(result.sources.submissionForm, "https://docs.google.com/forms/d/e/1FAIpQLSezqtPWIQ8ywc8-N-D6usLglgO11fnsQufBNh0qxehXV7RQTw/viewform"); assert.equal(result.sources.verifiedAt, "2026-07-24"); assert.equal(result.event.id, "hedera-x402-demo"); assert.equal(result.event.timeline.submissionDeadline, "July 31 at 11:59 PM ET"); assert.deepEqual(result.event.prizes, { count: 5, amountUsd: 1000 }); assert.equal(result.event.technicalRequirements.network, "Hedera testnet"); assert.ok(result.event.tracks.some((t: { id: string }) => t.id === "hedera-x402-bounty")); assert.ok(result.submission.validSubmissionRequirements.includes("A public open-source GitHub repository")); assert.ok(result.submission.validSubmissionRequirements.includes("HashScan links to relevant transactions")); });
-test("tool schemas reject malformed arguments", () => { assert.equal(toolSchemas.get_event_guidance.safeParse({}).success, false); assert.equal(toolSchemas.validate_project_strategy.safeParse({ idea: "x", extra: true }).success, false); assert.equal(toolSchemas.validate_project_strategy.safeParse({ event_id: "x", project_name: "x", project_summary: "x", problem: "x", target_users: "x", selected_track: "x", planned_integrations: ["x"], current_stage: "MVP", extra: true }).success, false); assert.equal(toolSchemas.audit_submission.safeParse({ repository_url: "", }).success, false); assert.equal(toolSchemas.audit_submission.safeParse({ event_id: "x", project_name: "x", repository_url: "https://github.com/x", selected_track: "x", project_summary: "x", extra: true }).success, false); });
-test("admin guard rejects absent keys and accepts matching demo key", () => { process.env.DEMO_ADMIN_KEY = "local-test-key"; assert.equal(isAdmin({ header: () => undefined } as never), false); assert.equal(isAdmin({ header: (name: string) => name === "x-admin-key" ? "local-test-key" : undefined } as never), true); });
+import test from "node:test";
+import assert from "node:assert/strict";
+import {
+  getEventGuidanceResponse,
+  premiumDailyLimit,
+  reservationAllowed,
+  replay,
+  reservationTimeoutMs,
+} from "./service.js";
+import { isAdmin } from "./auth.js";
+import { toolSchemas } from "./input.js";
+test("pending premium reservations consume tool, participant, daily, and event capacity", () => {
+  assert.equal(
+    reservationAllowed({
+      existingCalls: 2,
+      maxCalls: 3,
+      participantSpent: 0.05,
+      participantReserved: 0.05,
+      participantAllocation: 0.2,
+      dailySpend: 0.1,
+      dailyLimit: 0.1,
+      eventSpent: 1,
+      eventReserved: 0,
+      eventBudget: 100,
+      price: 0.05,
+    }),
+    false,
+  );
+});
+test("reservation policy leaves capacity for a valid first premium call", () => {
+  assert.equal(
+    reservationAllowed({
+      existingCalls: 0,
+      maxCalls: 3,
+      participantSpent: 0,
+      participantReserved: 0,
+      participantAllocation: 0.2,
+      dailySpend: 0,
+      dailyLimit: 0.1,
+      eventSpent: 0,
+      eventReserved: 0,
+      eventBudget: 100,
+      price: 0.01,
+    }),
+    true,
+  );
+});
+test("daily sponsorship cap matches the total premium tool allowance", () => {
+  assert.equal(premiumDailyLimit(), 0.13);
+  assert.equal(
+    reservationAllowed({
+      existingCalls: 1,
+      maxCalls: 2,
+      participantSpent: 0.06,
+      participantReserved: 0,
+      participantAllocation: 0.2,
+      dailySpend: 0.06,
+      dailyLimit: premiumDailyLimit(),
+      eventSpent: 0.06,
+      eventReserved: 0,
+      eventBudget: 100,
+      price: 0.05,
+    }),
+    true,
+  );
+});
+test("reservation timeout accepts positive milliseconds and falls back safely", () => {
+  assert.equal(reservationTimeoutMs("1200"), 1200);
+  assert.equal(reservationTimeoutMs("0"), 300000);
+});
+test("idempotent replay returns original response and transaction details", () => {
+  const result = replay({
+    id: "use_1",
+    price: ".01",
+    transaction_id: "tx_1",
+    hashscan_url: "https://hashscan/tx_1",
+    result_payload: { verdict: "PROMISING" },
+  });
+  assert.deepEqual(result, {
+    verdict: "PROMISING",
+    transaction: {
+      id: "use_1",
+      amount: 0.01,
+      transactionId: "tx_1",
+      hashscanUrl: "https://hashscan/tx_1",
+      mode: "DEMO_MODE",
+    },
+    idempotentReplay: true,
+  });
+});
+test("event guidance returns the canonical organizer-backed brief and preserves the caller question", () => {
+  const result = getEventGuidanceResponse({
+    question: "What must my submission include?",
+  });
+  assert.equal(result.question, "What must my submission include?");
+  assert.equal(result.payload.question, "What must my submission include?");
+  assert.equal(result.sources.eventBrief, "https://hedera.com/x402-bounty/");
+  assert.equal(
+    result.sources.submissionForm,
+    "https://docs.google.com/forms/d/e/1FAIpQLSezqtPWIQ8ywc8-N-D6usLglgO11fnsQufBNh0qxehXV7RQTw/viewform",
+  );
+  assert.equal(result.sources.verifiedAt, "2026-07-24");
+  assert.equal(result.event.id, "hedera-x402-demo");
+  assert.equal(
+    result.event.timeline.submissionDeadline,
+    "July 31 at 11:59 PM ET",
+  );
+  assert.deepEqual(result.event.prizes, { count: 5, amountUsd: 1000 });
+  assert.equal(result.event.technicalRequirements.network, "Hedera testnet");
+  assert.ok(
+    result.event.tracks.some(
+      (t: { id: string }) => t.id === "hedera-x402-bounty",
+    ),
+  );
+  assert.ok(
+    result.submission.validSubmissionRequirements.includes(
+      "A public open-source GitHub repository",
+    ),
+  );
+  assert.ok(
+    result.submission.validSubmissionRequirements.includes(
+      "HashScan links to relevant transactions",
+    ),
+  );
+});
+test("tool schemas reject malformed arguments", () => {
+  assert.equal(toolSchemas.get_event_guidance.safeParse({}).success, false);
+  assert.equal(
+    toolSchemas.validate_project_strategy.safeParse({ idea: "x", extra: true })
+      .success,
+    false,
+  );
+  assert.equal(
+    toolSchemas.validate_project_strategy.safeParse({
+      event_id: "x",
+      project_name: "x",
+      project_summary: "x",
+      problem: "x",
+      target_users: "x",
+      selected_track: "x",
+      planned_integrations: ["x"],
+      current_stage: "MVP",
+      extra: true,
+    }).success,
+    false,
+  );
+  assert.equal(
+    toolSchemas.audit_submission.safeParse({ repository_url: "" }).success,
+    false,
+  );
+  assert.equal(
+    toolSchemas.audit_submission.safeParse({
+      event_id: "x",
+      project_name: "x",
+      repository_url: "https://github.com/x",
+      selected_track: "x",
+      project_summary: "x",
+      extra: true,
+    }).success,
+    false,
+  );
+});
+test("admin guard rejects absent keys and accepts matching demo key", () => {
+  process.env.DEMO_ADMIN_KEY = "local-test-key";
+  assert.equal(isAdmin({ header: () => undefined } as never), false);
+  assert.equal(
+    isAdmin({
+      header: (name: string) =>
+        name === "x-admin-key" ? "local-test-key" : undefined,
+    } as never),
+    true,
+  );
+});

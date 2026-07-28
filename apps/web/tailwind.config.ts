@@ -1,1 +1,22 @@
-import type {Config} from "tailwindcss"; const config:Config={content:["./app/**/*.{ts,tsx}","./components/**/*.{ts,tsx}"],theme:{extend:{colors:{ink:"#070b0b",panel:"#0e1615",mint:"#9bf7cd",amber:"#ffbf68",line:"#26423a",smoke:"#aabbb2"},fontFamily:{display:["Arial Narrow","Impact","sans-serif"],mono:["ui-monospace","SFMono-Regular","monospace"]}}},plugins:[]};export default config;
+import type { Config } from "tailwindcss";
+const config: Config = {
+  content: ["./app/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}"],
+  theme: {
+    extend: {
+      colors: {
+        ink: "#070b0b",
+        panel: "#0e1615",
+        mint: "#9bf7cd",
+        amber: "#ffbf68",
+        line: "#26423a",
+        smoke: "#aabbb2",
+      },
+      fontFamily: {
+        display: ["Arial Narrow", "Impact", "sans-serif"],
+        mono: ["ui-monospace", "SFMono-Regular", "monospace"],
+      },
+    },
+  },
+  plugins: [],
+};
+export default config;

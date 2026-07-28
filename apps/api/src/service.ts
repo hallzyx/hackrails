@@ -2,22 +2,757 @@ import { randomUUID, createHash } from "node:crypto";
 import { pool, transaction } from "./db.js";
 import { demoPremiumResult, invokePremiumProvider } from "./x402.js";
 import { EVENT_ID, type ToolName } from "@hackrails/shared";
-const tools = [["get_event_guidance", "Official event rules, dates, eligibility, prizes, x402/Hedera requirements, and submission requirements.", "FREE", 0, 999], ["validate_project_strategy", "Official-fit strategy validation with actionable gaps.", "PREMIUM", .01, 3], ["audit_submission", "Pre-submission audit for evidence, criteria and blockers.", "PREMIUM", .05, 2]] as const;
-export function premiumDailyLimit(){return Number(tools.reduce((total,[, ,type,price,maxCalls])=>total+(type==="PREMIUM"?price*maxCalls:0),0).toFixed(6));}
-const primaryToken = "hxp_demo_agentard_7t4m", defaultReservationTimeoutMs=5*60*1000, sha=(v:string)=>createHash("sha256").update(v).digest("hex"), fail=(message:string,status:number)=>Object.assign(new Error(message),{status}), assertEvent=(id:string)=>{if(id!==EVENT_ID)throw fail("Unsupported event ID.",404)};
-export function reservationTimeoutMs(value=process.env.USAGE_RESERVATION_TIMEOUT_MS){const timeout=Number(value);return Number.isFinite(timeout)&&timeout>0?timeout:defaultReservationTimeoutMs;}
-export async function recoverStaleUsageReservations(timeoutMs=reservationTimeoutMs()){return transaction(async c=>{const recovered=await c.query(`WITH expired AS (UPDATE usage_records SET status='FAILED',error_code='Reservation expired before settlement.',x402_state='PAYMENT_FAILED' WHERE status='PENDING' AND created_at < now()-($1::bigint*interval '1 millisecond') RETURNING event_id,participant_id,price), event_releases AS (SELECT event_id,SUM(price) amount FROM expired GROUP BY event_id), participant_releases AS (SELECT participant_id,SUM(price) amount FROM expired GROUP BY participant_id), updated_events AS (UPDATE events e SET reserved_budget=e.reserved_budget-r.amount FROM event_releases r WHERE e.id=r.event_id), updated_participants AS (UPDATE participants p SET reserved_budget=p.reserved_budget-r.amount FROM participant_releases r WHERE p.id=r.participant_id) SELECT count(*)::int recovered FROM expired`,[timeoutMs]);return recovered.rows[0].recovered;});}
-export function reservationAllowed(i:{existingCalls:number;maxCalls:number;participantSpent:number;participantReserved:number;participantAllocation:number;dailySpend:number;dailyLimit:number;eventSpent:number;eventReserved:number;eventBudget:number;price:number}) { return i.existingCalls<i.maxCalls&&i.participantSpent+i.participantReserved+i.price<=i.participantAllocation&&i.dailySpend+i.price<=i.dailyLimit&&i.eventSpent+i.eventReserved+i.price<=i.eventBudget; }
-export function deriveDashboardMetrics(rows:Array<{tool_name:ToolName;price:number;status:string;participant_id:string}>,spent:number,participants:number){const total=rows.filter(r=>r.status!=="PENDING").length, settled=rows.filter(r=>r.status==="SETTLED"), usageByTool=(["get_event_guidance","validate_project_strategy","audit_submission"] as ToolName[]).map(tool=>{const calls=settled.filter(r=>r.tool_name===tool).length;return{tool,calls,rate:total?Number((calls/total).toFixed(3)):0}});return{totalCalls:total,freeCalls:settled.filter(r=>r.price===0).length,sponsoredCalls:settled.filter(r=>r.price>0).length,averageCostPerParticipant:participants?Number((spent/participants).toFixed(2)):0,callsPerTeam:participants?Number((total/participants).toFixed(2)):0,failedPayments:rows.filter(r=>r.status==="FAILED").length,policyRejections:rows.filter(r=>r.status==="REJECTED").length,usageByTool};}
-export async function resetDemo(){if(process.env.DEMO_MODE!=="true")throw fail("Demo controls are disabled.",403);const live=`live-${new Date().toISOString().slice(0,10)}-${randomUUID().slice(0,6)}`;await transaction(async c=>{for(const table of ["usage_records","participants","demo_sessions","tools","events"])await c.query(`DELETE FROM ${table}`);await c.query("INSERT INTO events(id,name,status,total_budget,currency,organizer_account_id,recipient_account_id) VALUES($1,$2,'DRAFT',100,'USDC',$3,$4)",[EVENT_ID,"Hedera x402 Builder Sprint",process.env.HEDERA_ACCOUNT_ID??"Organizer demo wallet",process.env.HEDERA_RECIPIENT_ACCOUNT_ID??"Provider demo wallet"]);await c.query("INSERT INTO demo_sessions(id,event_id,status) VALUES($1,$2,'OPEN')",[live,EVENT_ID]);for(const t of tools)await c.query("INSERT INTO tools(name,description,type,price,max_calls) VALUES($1,$2,$3,$4,$5)",[...t]);await c.query("INSERT INTO participants(id,event_id,demo_session_id,name,external_id,token_hash,allocated_budget,daily_limit,status) VALUES($1,$2,$3,$4,$5,$6,.20,.10,'ACTIVE'),($7,$2,$3,$8,$9,$10,.20,.10,'ACTIVE')",["team_001",EVENT_ID,live,"Team Agentard","team_001",sha(primaryToken),"team_002","Team Demo Two","team_002",sha("hxp_demo_two_9k2p")]);});return{sessionId:live,message:"Live demo session reset; historical sessions were deleted as allowed."};}
-export async function syncParticipantDailyLimit(){await pool.query("UPDATE participants SET daily_limit=$1 WHERE event_id=$2",[premiumDailyLimit(),EVENT_ID]);}
-export async function bootstrapLive(){const live=`${EVENT_ID}-live`;await transaction(async c=>{await c.query("INSERT INTO events(id,name,status,total_budget,currency,organizer_account_id,recipient_account_id) VALUES($1,$2,'ACTIVE',100,'USDC',$3,$4) ON CONFLICT (id) DO NOTHING",[EVENT_ID,"Hedera x402 Builder Sprint",process.env.HEDERA_ACCOUNT_ID??null,process.env.HEDERA_RECIPIENT_ACCOUNT_ID]);await c.query("INSERT INTO demo_sessions(id,event_id,status) VALUES($1,$2,'OPEN') ON CONFLICT (id) DO NOTHING",[live,EVENT_ID]);for(const t of tools)await c.query("INSERT INTO tools(name,description,type,price,max_calls) VALUES($1,$2,$3,$4,$5) ON CONFLICT (name) DO NOTHING",[...t]);await c.query("INSERT INTO participants(id,event_id,demo_session_id,name,external_id,token_hash,allocated_budget,daily_limit,status) VALUES($1,$2,$3,$4,$5,$6,.20,.10,'ACTIVE'),($7,$2,$3,$8,$9,$10,.20,.10,'ACTIVE') ON CONFLICT (id) DO NOTHING",["team_001",EVENT_ID,live,"Team Agentard","team_001",sha(primaryToken),"team_002","Team Demo Two","team_002",sha("hxp_demo_two_9k2p")]);});return{sessionId:live,message:"Live event bootstrap completed."};}export async function seedDemo(){if(process.env.DEMO_MODE!=="true")throw fail("Demo controls are disabled.",403);if(!(await pool.query("SELECT 1 FROM events WHERE id=$1",[EVENT_ID])).rowCount)await resetDemo();if(+(await pool.query("SELECT count(*) FROM demo_sessions WHERE event_id=$1 AND seeded",[EVENT_ID])).rows[0].count)return{seeded:false,message:"Historical demo activity already exists."};const historical=`history-${randomUUID().slice(0,8)}`;await transaction(async c=>{await c.query("INSERT INTO demo_sessions(id,event_id,status,seeded,closed_at) VALUES($1,$2,'CLOSED',true,now())",[historical,EVENT_ID]);let spent=0;for(let i=0;i<67;i++){const name=i%3===0?(i%2?"validate_project_strategy":"audit_submission"):"get_event_guidance",price=name==="audit_submission"?.05:name==="validate_project_strategy"?.01:0;spent+=price;await c.query("INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,transaction_id,hashscan_url,seeded,latency_ms,result_payload,settlement_mode,x402_state) VALUES($1,$2,$3,$4,$5,$6,$7,'SETTLED',$8,$9,true,120,'{}',$10,$11)",[randomUUID(),EVENT_ID,historical,i%2?"team_001":"team_002",name,`seed-${i}`,price,price?`demo-usdc-seed-${i}`:null,price?`https://hashscan.io/testnet/transaction/demo-usdc-seed-${i}`:null,price?"DEMO_MODE":"FREE",price?"PAYMENT_RESPONSE_RECORDED":"FREE"]);}await c.query("UPDATE events SET spent_budget=$1 WHERE id=$2",[spent.toFixed(2),EVENT_ID]);});return{seeded:true,message:"67 historical demo calls are visible in totals and history; the live session remains quota-clean."};}
-export async function dashboard(eventId=EVENT_ID){assertEvent(eventId);const er=await pool.query("SELECT e.*,s.id session_id FROM events e JOIN demo_sessions s ON s.event_id=e.id AND s.status='OPEN' WHERE e.id=$1 ORDER BY s.created_at DESC LIMIT 1",[eventId]),e=er.rows[0];if(!e)return null;const [pr,tr,all]=await Promise.all([pool.query("SELECT p.*,COALESCE(SUM((u.tool_name='validate_project_strategy' AND u.status IN ('PENDING','SETTLED'))::int),0)::int strategy_calls,COALESCE(SUM((u.tool_name='audit_submission' AND u.status IN ('PENDING','SETTLED'))::int),0)::int audit_calls FROM participants p LEFT JOIN usage_records u ON u.participant_id=p.id AND u.demo_session_id=p.demo_session_id GROUP BY p.id ORDER BY p.id"),pool.query("SELECT u.*,p.name participant FROM usage_records u JOIN participants p ON p.id=u.participant_id WHERE u.event_id=$1 ORDER BY u.created_at DESC LIMIT 30",[eventId]),pool.query("SELECT * FROM usage_records WHERE event_id=$1",[eventId])]);const rows=all.rows.map((r:any)=>({...r,price:+r.price})),m=deriveDashboardMetrics(rows,+e.spent_budget,pr.rows.length),settled=rows.filter((r:any)=>r.status==="SETTLED");return{event:{id:e.id,name:e.name,status:e.status,totalBudget:+e.total_budget,spentBudget:+e.spent_budget,reservedBudget:+e.reserved_budget,currency:e.currency,demoSessionId:e.session_id,seeded:rows.some((r:any)=>r.seeded)},metrics:{participantsSupported:pr.rows.length,activeTeams:pr.rows.filter((p:any)=>p.status==="ACTIVE").length,...m,budgetRemaining:+e.total_budget-+e.spent_budget-+e.reserved_budget,requirementsMissing:settled.filter((r:any)=>r.tool_name==="validate_project_strategy").length*2,submissionsAudited:settled.filter((r:any)=>r.tool_name==="audit_submission").length,submissionsReady:Math.max(0,settled.filter((r:any)=>r.tool_name==="audit_submission").length-1),blockersFound:settled.filter((r:any)=>r.tool_name==="audit_submission").length,mostUsedTool:m.usageByTool.sort((a,b)=>b.calls-a.calls)[0]?.tool??null},tools:tools.map(([name,description,type,price,maxCalls])=>({name,description,type,price,maxCalls,enabled:true})),participants:pr.rows.map((p:any)=>({id:p.id,name:p.name,externalId:p.external_id,allocatedBudget:+p.allocated_budget,spentBudget:+p.spent_budget,status:p.status,strategyCalls:p.strategy_calls,auditCalls:p.audit_calls})),transactions:tr.rows.map((u:any)=>({id:u.id,participant:u.participant,tool:u.tool_name,amount:+u.price,status:u.status,transactionId:u.transaction_id,hashscanUrl:u.hashscan_url,createdAt:u.created_at,latencyMs:u.latency_ms,seeded:u.seeded,settlementMode:u.settlement_mode,x402State:u.x402_state}))};}
-export async function revealParticipantToken(eventId:string,participantId:string){assertEvent(eventId);const p=(await pool.query("SELECT external_id FROM participants WHERE id=$1 AND event_id=$2",[participantId,eventId])).rows[0];if(!p)throw fail("Participant not found.",404);return{participantId,token:p.external_id==="team_001"?primaryToken:"hxp_demo_two_9k2p"};} export async function updateEvent(eventId:string,status:string){assertEvent(eventId);await pool.query("UPDATE events SET status=$1 WHERE id=$2",[status,eventId]);return dashboard(eventId)} export async function updateParticipant(eventId:string,id:string,status:string){assertEvent(eventId);await pool.query("UPDATE participants SET status=$1 WHERE id=$2 AND event_id=$3",[status,id,eventId]);return dashboard(eventId)} export async function resetParticipant(eventId:string,id:string){assertEvent(eventId);await transaction(async c=>{const p=(await c.query("SELECT demo_session_id FROM participants WHERE id=$1 AND event_id=$2 FOR UPDATE",[id,eventId])).rows[0];if(!p)throw fail("Participant not found.",404);await c.query("DELETE FROM usage_records WHERE participant_id=$1 AND demo_session_id=$2",[id,p.demo_session_id]);await c.query("UPDATE participants SET spent_budget=0,reserved_budget=0 WHERE id=$1",[id]);});return dashboard(eventId)}
+const tools = [
+  [
+    "get_event_guidance",
+    "Official event rules, dates, eligibility, prizes, x402/Hedera requirements, and submission requirements.",
+    "FREE",
+    0,
+    999,
+  ],
+  [
+    "validate_project_strategy",
+    "Official-fit strategy validation with actionable gaps.",
+    "PREMIUM",
+    0.01,
+    3,
+  ],
+  [
+    "audit_submission",
+    "Pre-submission audit for evidence, criteria and blockers.",
+    "PREMIUM",
+    0.05,
+    2,
+  ],
+] as const;
+export function premiumDailyLimit() {
+  return Number(
+    tools
+      .reduce(
+        (total, [, , type, price, maxCalls]) =>
+          total + (type === "PREMIUM" ? price * maxCalls : 0),
+        0,
+      )
+      .toFixed(6),
+  );
+}
+const primaryToken = "hxp_demo_agentard_7t4m",
+  defaultReservationTimeoutMs = 5 * 60 * 1000,
+  sha = (v: string) => createHash("sha256").update(v).digest("hex"),
+  fail = (message: string, status: number) =>
+    Object.assign(new Error(message), { status }),
+  assertEvent = (id: string) => {
+    if (id !== EVENT_ID) throw fail("Unsupported event ID.", 404);
+  };
+export function reservationTimeoutMs(
+  value = process.env.USAGE_RESERVATION_TIMEOUT_MS,
+) {
+  const timeout = Number(value);
+  return Number.isFinite(timeout) && timeout > 0
+    ? timeout
+    : defaultReservationTimeoutMs;
+}
+export async function recoverStaleUsageReservations(
+  timeoutMs = reservationTimeoutMs(),
+) {
+  return transaction(async (c) => {
+    const recovered = await c.query(
+      `WITH expired AS (UPDATE usage_records SET status='FAILED',error_code='Reservation expired before settlement.',x402_state='PAYMENT_FAILED' WHERE status='PENDING' AND created_at < now()-($1::bigint*interval '1 millisecond') RETURNING event_id,participant_id,price), event_releases AS (SELECT event_id,SUM(price) amount FROM expired GROUP BY event_id), participant_releases AS (SELECT participant_id,SUM(price) amount FROM expired GROUP BY participant_id), updated_events AS (UPDATE events e SET reserved_budget=e.reserved_budget-r.amount FROM event_releases r WHERE e.id=r.event_id), updated_participants AS (UPDATE participants p SET reserved_budget=p.reserved_budget-r.amount FROM participant_releases r WHERE p.id=r.participant_id) SELECT count(*)::int recovered FROM expired`,
+      [timeoutMs],
+    );
+    return recovered.rows[0].recovered;
+  });
+}
+export function reservationAllowed(i: {
+  existingCalls: number;
+  maxCalls: number;
+  participantSpent: number;
+  participantReserved: number;
+  participantAllocation: number;
+  dailySpend: number;
+  dailyLimit: number;
+  eventSpent: number;
+  eventReserved: number;
+  eventBudget: number;
+  price: number;
+}) {
+  return (
+    i.existingCalls < i.maxCalls &&
+    i.participantSpent + i.participantReserved + i.price <=
+      i.participantAllocation &&
+    i.dailySpend + i.price <= i.dailyLimit &&
+    i.eventSpent + i.eventReserved + i.price <= i.eventBudget
+  );
+}
+export function deriveDashboardMetrics(
+  rows: Array<{
+    tool_name: ToolName;
+    price: number;
+    status: string;
+    participant_id: string;
+  }>,
+  spent: number,
+  participants: number,
+) {
+  const total = rows.filter((r) => r.status !== "PENDING").length,
+    settled = rows.filter((r) => r.status === "SETTLED"),
+    usageByTool = (
+      [
+        "get_event_guidance",
+        "validate_project_strategy",
+        "audit_submission",
+      ] as ToolName[]
+    ).map((tool) => {
+      const calls = settled.filter((r) => r.tool_name === tool).length;
+      return {
+        tool,
+        calls,
+        rate: total ? Number((calls / total).toFixed(3)) : 0,
+      };
+    });
+  return {
+    totalCalls: total,
+    freeCalls: settled.filter((r) => r.price === 0).length,
+    sponsoredCalls: settled.filter((r) => r.price > 0).length,
+    averageCostPerParticipant: participants
+      ? Number((spent / participants).toFixed(2))
+      : 0,
+    callsPerTeam: participants ? Number((total / participants).toFixed(2)) : 0,
+    failedPayments: rows.filter((r) => r.status === "FAILED").length,
+    policyRejections: rows.filter((r) => r.status === "REJECTED").length,
+    usageByTool,
+  };
+}
+export async function resetDemo() {
+  if (process.env.DEMO_MODE !== "true")
+    throw fail("Demo controls are disabled.", 403);
+  const live = `live-${new Date().toISOString().slice(0, 10)}-${randomUUID().slice(0, 6)}`;
+  await transaction(async (c) => {
+    for (const table of [
+      "usage_records",
+      "participants",
+      "demo_sessions",
+      "tools",
+      "events",
+    ])
+      await c.query(`DELETE FROM ${table}`);
+    await c.query(
+      "INSERT INTO events(id,name,status,total_budget,currency,organizer_account_id,recipient_account_id) VALUES($1,$2,'DRAFT',100,'USDC',$3,$4)",
+      [
+        EVENT_ID,
+        "Hedera x402 Builder Sprint",
+        process.env.HEDERA_ACCOUNT_ID ?? "Organizer demo wallet",
+        process.env.HEDERA_RECIPIENT_ACCOUNT_ID ?? "Provider demo wallet",
+      ],
+    );
+    await c.query(
+      "INSERT INTO demo_sessions(id,event_id,status) VALUES($1,$2,'OPEN')",
+      [live, EVENT_ID],
+    );
+    for (const t of tools)
+      await c.query(
+        "INSERT INTO tools(name,description,type,price,max_calls) VALUES($1,$2,$3,$4,$5)",
+        [...t],
+      );
+    await c.query(
+      "INSERT INTO participants(id,event_id,demo_session_id,name,external_id,token_hash,allocated_budget,daily_limit,status) VALUES($1,$2,$3,$4,$5,$6,.20,.10,'ACTIVE'),($7,$2,$3,$8,$9,$10,.20,.10,'ACTIVE')",
+      [
+        "team_001",
+        EVENT_ID,
+        live,
+        "Team Agentard",
+        "team_001",
+        sha(primaryToken),
+        "team_002",
+        "Team Demo Two",
+        "team_002",
+        sha("hxp_demo_two_9k2p"),
+      ],
+    );
+  });
+  return {
+    sessionId: live,
+    message:
+      "Live demo session reset; historical sessions were deleted as allowed.",
+  };
+}
+export async function syncParticipantDailyLimit() {
+  await pool.query("UPDATE participants SET daily_limit=$1 WHERE event_id=$2", [
+    premiumDailyLimit(),
+    EVENT_ID,
+  ]);
+}
+export async function bootstrapLive() {
+  const live = `${EVENT_ID}-live`;
+  await transaction(async (c) => {
+    await c.query(
+      "INSERT INTO events(id,name,status,total_budget,currency,organizer_account_id,recipient_account_id) VALUES($1,$2,'ACTIVE',100,'USDC',$3,$4) ON CONFLICT (id) DO NOTHING",
+      [
+        EVENT_ID,
+        "Hedera x402 Builder Sprint",
+        process.env.HEDERA_ACCOUNT_ID ?? null,
+        process.env.HEDERA_RECIPIENT_ACCOUNT_ID,
+      ],
+    );
+    await c.query(
+      "INSERT INTO demo_sessions(id,event_id,status) VALUES($1,$2,'OPEN') ON CONFLICT (id) DO NOTHING",
+      [live, EVENT_ID],
+    );
+    for (const t of tools)
+      await c.query(
+        "INSERT INTO tools(name,description,type,price,max_calls) VALUES($1,$2,$3,$4,$5) ON CONFLICT (name) DO NOTHING",
+        [...t],
+      );
+    await c.query(
+      "INSERT INTO participants(id,event_id,demo_session_id,name,external_id,token_hash,allocated_budget,daily_limit,status) VALUES($1,$2,$3,$4,$5,$6,.20,.10,'ACTIVE'),($7,$2,$3,$8,$9,$10,.20,.10,'ACTIVE') ON CONFLICT (id) DO NOTHING",
+      [
+        "team_001",
+        EVENT_ID,
+        live,
+        "Team Agentard",
+        "team_001",
+        sha(primaryToken),
+        "team_002",
+        "Team Demo Two",
+        "team_002",
+        sha("hxp_demo_two_9k2p"),
+      ],
+    );
+  });
+  return { sessionId: live, message: "Live event bootstrap completed." };
+}
+export async function seedDemo() {
+  if (process.env.DEMO_MODE !== "true")
+    throw fail("Demo controls are disabled.", 403);
+  if (
+    !(await pool.query("SELECT 1 FROM events WHERE id=$1", [EVENT_ID])).rowCount
+  )
+    await resetDemo();
+  if (
+    +(
+      await pool.query(
+        "SELECT count(*) FROM demo_sessions WHERE event_id=$1 AND seeded",
+        [EVENT_ID],
+      )
+    ).rows[0].count
+  )
+    return {
+      seeded: false,
+      message: "Historical demo activity already exists.",
+    };
+  const historical = `history-${randomUUID().slice(0, 8)}`;
+  await transaction(async (c) => {
+    await c.query(
+      "INSERT INTO demo_sessions(id,event_id,status,seeded,closed_at) VALUES($1,$2,'CLOSED',true,now())",
+      [historical, EVENT_ID],
+    );
+    let spent = 0;
+    for (let i = 0; i < 67; i++) {
+      const name =
+          i % 3 === 0
+            ? i % 2
+              ? "validate_project_strategy"
+              : "audit_submission"
+            : "get_event_guidance",
+        price =
+          name === "audit_submission"
+            ? 0.05
+            : name === "validate_project_strategy"
+              ? 0.01
+              : 0;
+      spent += price;
+      await c.query(
+        "INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,transaction_id,hashscan_url,seeded,latency_ms,result_payload,settlement_mode,x402_state) VALUES($1,$2,$3,$4,$5,$6,$7,'SETTLED',$8,$9,true,120,'{}',$10,$11)",
+        [
+          randomUUID(),
+          EVENT_ID,
+          historical,
+          i % 2 ? "team_001" : "team_002",
+          name,
+          `seed-${i}`,
+          price,
+          price ? `demo-usdc-seed-${i}` : null,
+          price
+            ? `https://hashscan.io/testnet/transaction/demo-usdc-seed-${i}`
+            : null,
+          price ? "DEMO_MODE" : "FREE",
+          price ? "PAYMENT_RESPONSE_RECORDED" : "FREE",
+        ],
+      );
+    }
+    await c.query("UPDATE events SET spent_budget=$1 WHERE id=$2", [
+      spent.toFixed(2),
+      EVENT_ID,
+    ]);
+  });
+  return {
+    seeded: true,
+    message:
+      "67 historical demo calls are visible in totals and history; the live session remains quota-clean.",
+  };
+}
+export async function dashboard(eventId = EVENT_ID) {
+  assertEvent(eventId);
+  const er = await pool.query(
+      "SELECT e.*,s.id session_id FROM events e JOIN demo_sessions s ON s.event_id=e.id AND s.status='OPEN' WHERE e.id=$1 ORDER BY s.created_at DESC LIMIT 1",
+      [eventId],
+    ),
+    e = er.rows[0];
+  if (!e) return null;
+  const [pr, tr, all] = await Promise.all([
+    pool.query(
+      "SELECT p.*,COALESCE(SUM((u.tool_name='validate_project_strategy' AND u.status IN ('PENDING','SETTLED'))::int),0)::int strategy_calls,COALESCE(SUM((u.tool_name='audit_submission' AND u.status IN ('PENDING','SETTLED'))::int),0)::int audit_calls FROM participants p LEFT JOIN usage_records u ON u.participant_id=p.id AND u.demo_session_id=p.demo_session_id GROUP BY p.id ORDER BY p.id",
+    ),
+    pool.query(
+      "SELECT u.*,p.name participant FROM usage_records u JOIN participants p ON p.id=u.participant_id WHERE u.event_id=$1 ORDER BY u.created_at DESC LIMIT 30",
+      [eventId],
+    ),
+    pool.query("SELECT * FROM usage_records WHERE event_id=$1", [eventId]),
+  ]);
+  const rows = all.rows.map((r: any) => ({ ...r, price: +r.price })),
+    m = deriveDashboardMetrics(rows, +e.spent_budget, pr.rows.length),
+    settled = rows.filter((r: any) => r.status === "SETTLED");
+  return {
+    event: {
+      id: e.id,
+      name: e.name,
+      status: e.status,
+      totalBudget: +e.total_budget,
+      spentBudget: +e.spent_budget,
+      reservedBudget: +e.reserved_budget,
+      currency: e.currency,
+      demoSessionId: e.session_id,
+      seeded: rows.some((r: any) => r.seeded),
+    },
+    metrics: {
+      participantsSupported: pr.rows.length,
+      activeTeams: pr.rows.filter((p: any) => p.status === "ACTIVE").length,
+      ...m,
+      budgetRemaining: +e.total_budget - +e.spent_budget - +e.reserved_budget,
+      requirementsMissing:
+        settled.filter((r: any) => r.tool_name === "validate_project_strategy")
+          .length * 2,
+      submissionsAudited: settled.filter(
+        (r: any) => r.tool_name === "audit_submission",
+      ).length,
+      submissionsReady: Math.max(
+        0,
+        settled.filter((r: any) => r.tool_name === "audit_submission").length -
+          1,
+      ),
+      blockersFound: settled.filter(
+        (r: any) => r.tool_name === "audit_submission",
+      ).length,
+      mostUsedTool:
+        m.usageByTool.sort((a, b) => b.calls - a.calls)[0]?.tool ?? null,
+    },
+    tools: tools.map(([name, description, type, price, maxCalls]) => ({
+      name,
+      description,
+      type,
+      price,
+      maxCalls,
+      enabled: true,
+    })),
+    participants: pr.rows.map((p: any) => ({
+      id: p.id,
+      name: p.name,
+      externalId: p.external_id,
+      allocatedBudget: +p.allocated_budget,
+      spentBudget: +p.spent_budget,
+      status: p.status,
+      strategyCalls: p.strategy_calls,
+      auditCalls: p.audit_calls,
+    })),
+    transactions: tr.rows.map((u: any) => ({
+      id: u.id,
+      participant: u.participant,
+      tool: u.tool_name,
+      amount: +u.price,
+      status: u.status,
+      transactionId: u.transaction_id,
+      hashscanUrl: u.hashscan_url,
+      createdAt: u.created_at,
+      latencyMs: u.latency_ms,
+      seeded: u.seeded,
+      settlementMode: u.settlement_mode,
+      x402State: u.x402_state,
+    })),
+  };
+}
+export async function revealParticipantToken(
+  eventId: string,
+  participantId: string,
+) {
+  assertEvent(eventId);
+  const p = (
+    await pool.query(
+      "SELECT external_id FROM participants WHERE id=$1 AND event_id=$2",
+      [participantId, eventId],
+    )
+  ).rows[0];
+  if (!p) throw fail("Participant not found.", 404);
+  return {
+    participantId,
+    token: p.external_id === "team_001" ? primaryToken : "hxp_demo_two_9k2p",
+  };
+}
+export async function updateEvent(eventId: string, status: string) {
+  assertEvent(eventId);
+  await pool.query("UPDATE events SET status=$1 WHERE id=$2", [
+    status,
+    eventId,
+  ]);
+  return dashboard(eventId);
+}
+export async function updateParticipant(
+  eventId: string,
+  id: string,
+  status: string,
+) {
+  assertEvent(eventId);
+  await pool.query(
+    "UPDATE participants SET status=$1 WHERE id=$2 AND event_id=$3",
+    [status, id, eventId],
+  );
+  return dashboard(eventId);
+}
+export async function resetParticipant(eventId: string, id: string) {
+  assertEvent(eventId);
+  await transaction(async (c) => {
+    const p = (
+      await c.query(
+        "SELECT demo_session_id FROM participants WHERE id=$1 AND event_id=$2 FOR UPDATE",
+        [id, eventId],
+      )
+    ).rows[0];
+    if (!p) throw fail("Participant not found.", 404);
+    await c.query(
+      "DELETE FROM usage_records WHERE participant_id=$1 AND demo_session_id=$2",
+      [id, p.demo_session_id],
+    );
+    await c.query(
+      "UPDATE participants SET spent_budget=0,reserved_budget=0 WHERE id=$1",
+      [id],
+    );
+  });
+  return dashboard(eventId);
+}
 const EVENT_BRIEF_URL = "https://hedera.com/x402-bounty/";
-const SUBMISSION_FORM_URL = "https://docs.google.com/forms/d/e/1FAIpQLSezqtPWIQ8ywc8-N-D6usLglgO11fnsQufBNh0qxehXV7RQTw/viewform";
+const SUBMISSION_FORM_URL =
+  "https://docs.google.com/forms/d/e/1FAIpQLSezqtPWIQ8ywc8-N-D6usLglgO11fnsQufBNh0qxehXV7RQTw/viewform";
 const EVENT_GUIDANCE_VERIFIED_AT = "2026-07-24";
-export function getEventGuidanceResponse(payload:Record<string,unknown>){return{tool:"get_event_guidance",kind:"official_event_brief",answer:"Canonical organizer-backed event and submission information. This free tool does not provide project strategy validation.",scope:"Limited to official event rules, logistics, submission requirements, and source-backed facts. Questions outside that scope require a premium tool or another source.",question:payload.question,payload,event:{id:EVENT_ID,name:"Hedera x402 Bounty",purpose:"Build the internet's payment layer.",objective:"Build an open-source payment solution on x402 using Hedera rails.",timeline:{bountyRuns:"July 13 through July 31",submissionDeadline:"July 31 at 11:59 PM ET"},eligibility:{entry:"Anyone can enter online.",teamSize:"Flexible.",prizePayer:"One nominated payer per team handles prize splitting."},prizes:{count:5,amountUsd:1000},technicalRequirements:{network:"Hedera testnet",settlementAssets:["HBAR","USDC"],referenceArchitectures:["An agent paying per query","A pay-to-read data marketplace"],referenceArchitectureNote:"These are starting points, not requirements."},judging:["A working end-to-end flow","Real on-chain x402 payments","Effective use of Hedera rails"],tracks:[{id:"hedera-x402-bounty",name:"Hedera x402 Bounty",description:"Build an open-source payment solution on x402 using Hedera rails."}]},submission:{canonicalEndpoint:SUBMISSION_FORM_URL,validSubmissionRequirements:["A public open-source GitHub repository","A demo video under five minutes showing the complete end-to-end flow and on-chain transactions","HashScan links to relevant transactions","A completed submission form"],note:"The submission form is the canonical endpoint. This response does not claim form fields beyond requirements verified on the official event page."},sources:{verifiedAt:EVENT_GUIDANCE_VERIFIED_AT,eventBrief:EVENT_BRIEF_URL,submissionForm:SUBMISSION_FORM_URL},settlement:"FREE"};}
-export function replay(row:Record<string,any>){return{...((row.result_payload as Record<string,unknown>)??{}),transaction:{id:row.id,amount:+row.price,transactionId:row.transaction_id,hashscanUrl:row.hashscan_url,mode:row.settlement_mode??(row.price?"DEMO_MODE":"FREE"),...(row.x402_state?{x402State:row.x402_state}:{})},idempotentReplay:true};}
-export async function invokeTool(input:{token:string;tool:ToolName;idempotencyKey?:string;payload:Record<string,unknown>}){const key=input.idempotencyKey??randomUUID();const authenticated=(await pool.query("SELECT id FROM participants WHERE token_hash=$1",[sha(input.token)])).rows[0];if(!authenticated)throw fail("Invalid participant token.",401);const lock=await pool.connect();try{const scope=`${authenticated.id}:${input.tool}:${key}`;await lock.query("SELECT pg_advisory_lock(hashtext($1))",[scope]);await recoverStaleUsageReservations();const existing=(await lock.query("SELECT * FROM usage_records WHERE participant_id=$1 AND tool_name=$2 AND idempotency_key=$3",[authenticated.id,input.tool,key])).rows[0];if(existing){if(existing.status==="PENDING")throw fail("Original request is still settling; retry with the same idempotency key.",409);return replay(existing);}const started=Date.now();const reserve=await transaction(async c=>{const p=(await c.query("SELECT p.*,e.status event_status FROM participants p JOIN events e ON e.id=p.event_id WHERE p.id=$1 FOR UPDATE",[authenticated.id])).rows[0];if(!p)throw fail("Invalid participant token.",401);const reject=async(message:string,status:number)=>{await c.query("INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,request_payload,error_code,x402_state) VALUES($1,$2,$3,$4,$5,$6,0,'REJECTED',$7,$8,'POLICY_REJECTED')",[randomUUID(),p.event_id,p.demo_session_id,p.id,input.tool,key,input.payload,message]);throw fail(message,status)};if(p.event_status!=="ACTIVE")return reject("Event access is not active.",409);if(p.status!=="ACTIVE")return reject("Participant access is paused.",409);const t=(await c.query("SELECT * FROM tools WHERE name=$1 AND enabled=true",[input.tool])).rows[0];if(!t)return reject("Tool is unavailable.",404);const e=(await c.query("SELECT * FROM events WHERE id=$1 FOR UPDATE",[p.event_id])).rows[0],price=+t.price,existingCalls=+(await c.query("SELECT count(*) FROM usage_records WHERE participant_id=$1 AND demo_session_id=$2 AND tool_name=$3 AND status IN ('PENDING','SETTLED')",[p.id,p.demo_session_id,input.tool])).rows[0].count,dailySpend=+(await c.query("SELECT COALESCE(sum(price),0) FROM usage_records WHERE participant_id=$1 AND status IN ('PENDING','SETTLED') AND created_at >= date_trunc('day',now())",[p.id])).rows[0].coalesce;if(!reservationAllowed({existingCalls,maxCalls:t.max_calls,participantSpent:+p.spent_budget,participantReserved:+p.reserved_budget,participantAllocation:+p.allocated_budget,dailySpend,dailyLimit:+p.daily_limit,eventSpent:+e.spent_budget,eventReserved:+e.reserved_budget,eventBudget:+e.total_budget,price}))return reject("Sponsored allowance exceeded. No payment was executed.",429);const id=randomUUID();await c.query("INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,request_payload,x402_state) VALUES($1,$2,$3,$4,$5,$6,$7,'PENDING',$8,$9)",[id,p.event_id,p.demo_session_id,p.id,input.tool,key,price,input.payload,price?"RESERVED":"FREE"]);if(price){await c.query("UPDATE events SET reserved_budget=reserved_budget+$1 WHERE id=$2",[price,e.id]);await c.query("UPDATE participants SET reserved_budget=reserved_budget+$1 WHERE id=$2",[price,p.id]);}return{id,price,p,e};});let output:any,set:any,flow:any;try{if(reserve.price){flow=process.env.DEMO_MODE==="true"?await demoPremiumResult(input.tool,input.payload,key):await invokePremiumProvider(input.tool,input.payload,key);set={transactionId:flow.transactionId,hashscanUrl:flow.transactionId?`https://hashscan.io/${networkName()}/transaction/${flow.transactionId}`:null,mode:process.env.DEMO_MODE==="true"?"DEMO_MODE":"HEDERA_X402_FACILITATOR"};output=flow.result;}else{set={transactionId:null,hashscanUrl:null,mode:"FREE"};output=getEventGuidanceResponse(input.payload);}}catch(error){await transaction(async c=>{const failed=await c.query("UPDATE usage_records SET status='FAILED',error_code=$1,x402_state='PAYMENT_FAILED' WHERE id=$2 AND status='PENDING' RETURNING id",[(error as Error).message,reserve.id]);if(reserve.price&&failed.rowCount){await c.query("UPDATE events SET reserved_budget=reserved_budget-$1 WHERE id=$2",[reserve.price,reserve.e.id]);await c.query("UPDATE participants SET reserved_budget=reserved_budget-$1 WHERE id=$2",[reserve.price,reserve.p.id]);}});throw fail("Settlement or premium provider flow failed; reservation released.",502);}await transaction(async c=>{const settled=await c.query("UPDATE usage_records SET status='SETTLED',transaction_id=$1,hashscan_url=$2,result_payload=$3,latency_ms=$4,settled_at=now(),settlement_mode=$5,x402_state=$6,payment_required=$7,payment_response=$8,payment_payload_hash=$9,facilitator_receipt=$10 WHERE id=$11 AND status='PENDING' RETURNING id",[set.transactionId,set.hashscanUrl,JSON.stringify(output),Date.now()-started,set.mode,flow?.x402State??"FREE",flow?.paymentRequired??null,flow?.paymentResponse??null,flow?.paymentPayloadHash??null,flow?.settlementReceipt??null,reserve.id]);if(!settled.rowCount)throw fail("Reservation expired before settlement; retry the request.",409);if(reserve.price){await c.query("UPDATE events SET reserved_budget=reserved_budget-$1,spent_budget=spent_budget+$1 WHERE id=$2",[reserve.price,reserve.e.id]);await c.query("UPDATE participants SET reserved_budget=reserved_budget-$1,spent_budget=spent_budget+$1 WHERE id=$2",[reserve.price,reserve.p.id]);}});return{...output,transaction:{id:reserve.id,amount:reserve.price,...set,x402State:flow?.x402State??"FREE"},idempotentReplay:false};}finally{await lock.query("SELECT pg_advisory_unlock(hashtext($1))",[`${authenticated.id}:${input.tool}:${key}`]).catch(()=>undefined);lock.release();}}
-function networkName(){return (process.env.HEDERA_NETWORK??"hedera:testnet").split(":")[1]??"testnet";}
+export function getEventGuidanceResponse(payload: Record<string, unknown>) {
+  return {
+    tool: "get_event_guidance",
+    kind: "official_event_brief",
+    answer:
+      "Canonical organizer-backed event and submission information. This free tool does not provide project strategy validation.",
+    scope:
+      "Limited to official event rules, logistics, submission requirements, and source-backed facts. Questions outside that scope require a premium tool or another source.",
+    question: payload.question,
+    payload,
+    event: {
+      id: EVENT_ID,
+      name: "Hedera x402 Bounty",
+      purpose: "Build the internet's payment layer.",
+      objective:
+        "Build an open-source payment solution on x402 using Hedera rails.",
+      timeline: {
+        bountyRuns: "July 13 through July 31",
+        submissionDeadline: "July 31 at 11:59 PM ET",
+      },
+      eligibility: {
+        entry: "Anyone can enter online.",
+        teamSize: "Flexible.",
+        prizePayer: "One nominated payer per team handles prize splitting.",
+      },
+      prizes: { count: 5, amountUsd: 1000 },
+      technicalRequirements: {
+        network: "Hedera testnet",
+        settlementAssets: ["HBAR", "USDC"],
+        referenceArchitectures: [
+          "An agent paying per query",
+          "A pay-to-read data marketplace",
+        ],
+        referenceArchitectureNote:
+          "These are starting points, not requirements.",
+      },
+      judging: [
+        "A working end-to-end flow",
+        "Real on-chain x402 payments",
+        "Effective use of Hedera rails",
+      ],
+      tracks: [
+        {
+          id: "hedera-x402-bounty",
+          name: "Hedera x402 Bounty",
+          description:
+            "Build an open-source payment solution on x402 using Hedera rails.",
+        },
+      ],
+    },
+    submission: {
+      canonicalEndpoint: SUBMISSION_FORM_URL,
+      validSubmissionRequirements: [
+        "A public open-source GitHub repository",
+        "A demo video under five minutes showing the complete end-to-end flow and on-chain transactions",
+        "HashScan links to relevant transactions",
+        "A completed submission form",
+      ],
+      note: "The submission form is the canonical endpoint. This response does not claim form fields beyond requirements verified on the official event page.",
+    },
+    sources: {
+      verifiedAt: EVENT_GUIDANCE_VERIFIED_AT,
+      eventBrief: EVENT_BRIEF_URL,
+      submissionForm: SUBMISSION_FORM_URL,
+    },
+    settlement: "FREE",
+  };
+}
+export function replay(row: Record<string, any>) {
+  return {
+    ...((row.result_payload as Record<string, unknown>) ?? {}),
+    transaction: {
+      id: row.id,
+      amount: +row.price,
+      transactionId: row.transaction_id,
+      hashscanUrl: row.hashscan_url,
+      mode: row.settlement_mode ?? (row.price ? "DEMO_MODE" : "FREE"),
+      ...(row.x402_state ? { x402State: row.x402_state } : {}),
+    },
+    idempotentReplay: true,
+  };
+}
+export async function invokeTool(input: {
+  token: string;
+  tool: ToolName;
+  idempotencyKey?: string;
+  payload: Record<string, unknown>;
+}) {
+  const key = input.idempotencyKey ?? randomUUID();
+  const authenticated = (
+    await pool.query("SELECT id FROM participants WHERE token_hash=$1", [
+      sha(input.token),
+    ])
+  ).rows[0];
+  if (!authenticated) throw fail("Invalid participant token.", 401);
+  const lock = await pool.connect();
+  try {
+    const scope = `${authenticated.id}:${input.tool}:${key}`;
+    await lock.query("SELECT pg_advisory_lock(hashtext($1))", [scope]);
+    await recoverStaleUsageReservations();
+    const existing = (
+      await lock.query(
+        "SELECT * FROM usage_records WHERE participant_id=$1 AND tool_name=$2 AND idempotency_key=$3",
+        [authenticated.id, input.tool, key],
+      )
+    ).rows[0];
+    if (existing) {
+      if (existing.status === "PENDING")
+        throw fail(
+          "Original request is still settling; retry with the same idempotency key.",
+          409,
+        );
+      return replay(existing);
+    }
+    const started = Date.now();
+    const reserve = await transaction(async (c) => {
+      const p = (
+        await c.query(
+          "SELECT p.*,e.status event_status FROM participants p JOIN events e ON e.id=p.event_id WHERE p.id=$1 FOR UPDATE",
+          [authenticated.id],
+        )
+      ).rows[0];
+      if (!p) throw fail("Invalid participant token.", 401);
+      const reject = async (message: string, status: number) => {
+        await c.query(
+          "INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,request_payload,error_code,x402_state) VALUES($1,$2,$3,$4,$5,$6,0,'REJECTED',$7,$8,'POLICY_REJECTED')",
+          [
+            randomUUID(),
+            p.event_id,
+            p.demo_session_id,
+            p.id,
+            input.tool,
+            key,
+            input.payload,
+            message,
+          ],
+        );
+        throw fail(message, status);
+      };
+      if (p.event_status !== "ACTIVE")
+        return reject("Event access is not active.", 409);
+      if (p.status !== "ACTIVE")
+        return reject("Participant access is paused.", 409);
+      const t = (
+        await c.query("SELECT * FROM tools WHERE name=$1 AND enabled=true", [
+          input.tool,
+        ])
+      ).rows[0];
+      if (!t) return reject("Tool is unavailable.", 404);
+      const e = (
+          await c.query("SELECT * FROM events WHERE id=$1 FOR UPDATE", [
+            p.event_id,
+          ])
+        ).rows[0],
+        price = +t.price,
+        existingCalls = +(
+          await c.query(
+            "SELECT count(*) FROM usage_records WHERE participant_id=$1 AND demo_session_id=$2 AND tool_name=$3 AND status IN ('PENDING','SETTLED')",
+            [p.id, p.demo_session_id, input.tool],
+          )
+        ).rows[0].count,
+        dailySpend = +(
+          await c.query(
+            "SELECT COALESCE(sum(price),0) FROM usage_records WHERE participant_id=$1 AND status IN ('PENDING','SETTLED') AND created_at >= date_trunc('day',now())",
+            [p.id],
+          )
+        ).rows[0].coalesce;
+      if (
+        !reservationAllowed({
+          existingCalls,
+          maxCalls: t.max_calls,
+          participantSpent: +p.spent_budget,
+          participantReserved: +p.reserved_budget,
+          participantAllocation: +p.allocated_budget,
+          dailySpend,
+          dailyLimit: +p.daily_limit,
+          eventSpent: +e.spent_budget,
+          eventReserved: +e.reserved_budget,
+          eventBudget: +e.total_budget,
+          price,
+        })
+      )
+        return reject(
+          "Sponsored allowance exceeded. No payment was executed.",
+          429,
+        );
+      const id = randomUUID();
+      await c.query(
+        "INSERT INTO usage_records(id,event_id,demo_session_id,participant_id,tool_name,idempotency_key,price,status,request_payload,x402_state) VALUES($1,$2,$3,$4,$5,$6,$7,'PENDING',$8,$9)",
+        [
+          id,
+          p.event_id,
+          p.demo_session_id,
+          p.id,
+          input.tool,
+          key,
+          price,
+          input.payload,
+          price ? "RESERVED" : "FREE",
+        ],
+      );
+      if (price) {
+        await c.query(
+          "UPDATE events SET reserved_budget=reserved_budget+$1 WHERE id=$2",
+          [price, e.id],
+        );
+        await c.query(
+          "UPDATE participants SET reserved_budget=reserved_budget+$1 WHERE id=$2",
+          [price, p.id],
+        );
+      }
+      return { id, price, p, e };
+    });
+    let output: any, set: any, flow: any;
+    try {
+      if (reserve.price) {
+        flow =
+          process.env.DEMO_MODE === "true"
+            ? await demoPremiumResult(input.tool, input.payload, key)
+            : await invokePremiumProvider(input.tool, input.payload, key);
+        set = {
+          transactionId: flow.transactionId,
+          hashscanUrl: flow.transactionId
+            ? `https://hashscan.io/${networkName()}/transaction/${flow.transactionId}`
+            : null,
+          mode:
+            process.env.DEMO_MODE === "true"
+              ? "DEMO_MODE"
+              : "HEDERA_X402_FACILITATOR",
+        };
+        output = flow.result;
+      } else {
+        set = { transactionId: null, hashscanUrl: null, mode: "FREE" };
+        output = getEventGuidanceResponse(input.payload);
+      }
+    } catch (error) {
+      await transaction(async (c) => {
+        const failed = await c.query(
+          "UPDATE usage_records SET status='FAILED',error_code=$1,x402_state='PAYMENT_FAILED' WHERE id=$2 AND status='PENDING' RETURNING id",
+          [(error as Error).message, reserve.id],
+        );
+        if (reserve.price && failed.rowCount) {
+          await c.query(
+            "UPDATE events SET reserved_budget=reserved_budget-$1 WHERE id=$2",
+            [reserve.price, reserve.e.id],
+          );
+          await c.query(
+            "UPDATE participants SET reserved_budget=reserved_budget-$1 WHERE id=$2",
+            [reserve.price, reserve.p.id],
+          );
+        }
+      });
+      throw fail(
+        "Settlement or premium provider flow failed; reservation released.",
+        502,
+      );
+    }
+    await transaction(async (c) => {
+      const settled = await c.query(
+        "UPDATE usage_records SET status='SETTLED',transaction_id=$1,hashscan_url=$2,result_payload=$3,latency_ms=$4,settled_at=now(),settlement_mode=$5,x402_state=$6,payment_required=$7,payment_response=$8,payment_payload_hash=$9,facilitator_receipt=$10 WHERE id=$11 AND status='PENDING' RETURNING id",
+        [
+          set.transactionId,
+          set.hashscanUrl,
+          JSON.stringify(output),
+          Date.now() - started,
+          set.mode,
+          flow?.x402State ?? "FREE",
+          flow?.paymentRequired ?? null,
+          flow?.paymentResponse ?? null,
+          flow?.paymentPayloadHash ?? null,
+          flow?.settlementReceipt ?? null,
+          reserve.id,
+        ],
+      );
+      if (!settled.rowCount)
+        throw fail(
+          "Reservation expired before settlement; retry the request.",
+          409,
+        );
+      if (reserve.price) {
+        await c.query(
+          "UPDATE events SET reserved_budget=reserved_budget-$1,spent_budget=spent_budget+$1 WHERE id=$2",
+          [reserve.price, reserve.e.id],
+        );
+        await c.query(
+          "UPDATE participants SET reserved_budget=reserved_budget-$1,spent_budget=spent_budget+$1 WHERE id=$2",
+          [reserve.price, reserve.p.id],
+        );
+      }
+    });
+    return {
+      ...output,
+      transaction: {
+        id: reserve.id,
+        amount: reserve.price,
+        ...set,
+        x402State: flow?.x402State ?? "FREE",
+      },
+      idempotentReplay: false,
+    };
+  } finally {
+    await lock
+      .query("SELECT pg_advisory_unlock(hashtext($1))", [
+        `${authenticated.id}:${input.tool}:${key}`,
+      ])
+      .catch(() => undefined);
+    lock.release();
+  }
+}
+function networkName() {
+  return (
+    (process.env.HEDERA_NETWORK ?? "hedera:testnet").split(":")[1] ?? "testnet"
+  );
+}

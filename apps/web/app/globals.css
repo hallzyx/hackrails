@@ -1,2 +1,42 @@
-@tailwind base;@tailwind components;@tailwind utilities;
-:root{background:#070b0b;color:#ecf7f1}*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at 87% 3%,#18382e 0,transparent 27rem),#070b0b;color:#ecf7f1;font-family:ui-monospace,SFMono-Regular,monospace}.grid-noise{background-image:linear-gradient(#ffffff06 1px,transparent 1px),linear-gradient(90deg,#ffffff06 1px,transparent 1px);background-size:28px 28px}.panel{border:1px solid #26423a;background:#0e1615cc;box-shadow:0 18px 50px #0005}.scan{animation:scan 6s linear infinite}@keyframes scan{from{transform:translateY(-130%)}to{transform:translateY(500%)}}button{font:inherit}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+:root {
+  background: #070b0b;
+  color: #ecf7f1;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 87% 3%, #18382e 0, transparent 27rem), #070b0b;
+  color: #ecf7f1;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+}
+.grid-noise {
+  background-image:
+    linear-gradient(#ffffff06 1px, transparent 1px),
+    linear-gradient(90deg, #ffffff06 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.panel {
+  border: 1px solid #26423a;
+  background: #0e1615cc;
+  box-shadow: 0 18px 50px #0005;
+}
+.scan {
+  animation: scan 6s linear infinite;
+}
+@keyframes scan {
+  from {
+    transform: translateY(-130%);
+  }
+  to {
+    transform: translateY(500%);
+  }
+}
+button {
+  font: inherit;
+}
