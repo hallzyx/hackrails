@@ -90,15 +90,17 @@ Do not spend funds for a UI-only check. Use the isolated testing configuration d
 
 ## CI recommendation
 
-The project currently provides local verification commands but no committed CI workflow. A future CI job should run:
+The committed CI workflow runs the same verification commands on pushes and pull requests:
 
 ```bash
 npm ci
+npm run lint
 npm run typecheck
 npm run test
-npm run test -w @hackrails/mcp
 npm run build
 ```
+
+The root `npm test` command includes provider, API, and MCP tests.
 
 ## Related documents
 
