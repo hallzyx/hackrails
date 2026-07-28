@@ -76,7 +76,7 @@ Required input includes:
 
 ### `audit_submission`
 
-Premium pre-submission audit for repository evidence, criteria, implementation signals, and blockers.
+Premium pre-submission audit for repository evidence, criteria, implementation signals, and blockers. Video review is outside this tool's scope and remains part of the broader submission process.
 
 Required input includes:
 
@@ -87,6 +87,19 @@ Required input includes:
 - `project_summary`.
 
 Video validation is intentionally out of scope for the current MVP.
+
+> **Demo data notice**
+>
+> The organizer intelligence used by `validate_project_strategy` and
+> `audit_submission` is a synthetic, curated dataset created for the HackRails
+> MVP using the current competition as context.
+>
+> It demonstrates how official rules, historical projects, sponsor objectives,
+> clarifications, rejection patterns, and submission criteria would be supplied
+> or approved by a real hackathon organizer in production.
+>
+> The dataset must not be interpreted as official statements, historical results,
+> or private judging information published by Hedera.
 
 ## Agent Skill
 
@@ -114,7 +127,7 @@ The skill does not authenticate or execute calls by itself. MCP remains the runt
 
 Use the dashboard's **Import MCP** action to generate a token-specific configuration. The following examples use a placeholder environment variable rather than embedding a real token.
 
-### Claude Code, Cursor, and compatible clients
+### Claude Code
 
 ```json
 {
@@ -130,24 +143,59 @@ Use the dashboard's **Import MCP** action to generate a token-specific configura
 }
 ```
 
+### Cursor
+
+```json
+{
+  "mcpServers": {
+    "hackrails": {
+      "url": "http://localhost:4001/mcp",
+      "headers": {
+        "Authorization": "Bearer ${HACKRAILS_PARTICIPANT_TOKEN}"
+      }
+    }
+  }
+}
+```
+
 ### OpenCode
 
 ```json
 {
   "mcp": {
-    "servers": {
-      "hackrails": {
-        "type": "remote",
-        "url": "http://localhost:4001/mcp",
-        "enabled": true,
-        "headers": {
-          "Authorization": "Bearer ${HACKRAILS_PARTICIPANT_TOKEN}"
-        },
-        "timeout": 90000
-      }
+    "hackrails": {
+      "type": "remote",
+      "url": "http://localhost:4001/mcp",
+      "enabled": true,
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer ${HACKRAILS_PARTICIPANT_TOKEN}"
+      },
+      "timeout": 90000
     }
   }
 }
+```
+
+### Codex CLI
+
+Codex expects `bearer_token_env_var` to contain only the environment variable
+name. Do not put the token or the `Bearer ` prefix in `config.toml`:
+
+```toml
+[mcp_servers.hackrails]
+url = "http://localhost:4001/mcp"
+bearer_token_env_var = "HACKRAILS_TOKEN"
+enabled = true
+startup_timeout_sec = 20
+tool_timeout_sec = 90
+```
+
+Set the token separately before starting Codex:
+
+```bash
+export HACKRAILS_TOKEN="<participant-token>"
+codex
 ```
 
 ### MCP JSON-RPC example

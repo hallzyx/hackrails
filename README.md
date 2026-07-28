@@ -77,6 +77,19 @@ Participants consume sponsored capabilities. They do not pay, sign transactions,
 | `validate_project_strategy` | Premium | Validate project fit against organizer knowledge and sponsor objectives | 3 calls/team at `0.01 USDC` |
 | `audit_submission` | Premium | Audit repository evidence, criteria, and submission blockers | 2 calls/team at `0.05 USDC` |
 
+> **Demo data notice**
+>
+> The organizer intelligence used by `validate_project_strategy` and
+> `audit_submission` is a synthetic, curated dataset created for the HackRails
+> MVP using the current competition as context.
+>
+> It demonstrates how official rules, historical projects, sponsor objectives,
+> clarifications, rejection patterns, and submission criteria would be supplied
+> or approved by a real hackathon organizer in production.
+>
+> The dataset must not be interpreted as official statements, historical results,
+> or private judging information published by Hedera.
+
 The current aggregate premium allowance is:
 
 ```text
