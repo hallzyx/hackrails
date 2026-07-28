@@ -46,9 +46,9 @@ docker compose config --quiet
 - payment requirement validation;
 - network, asset, recipient, and amount pinning;
 - timeout behavior;
-- demo receipts.
+- settlement failure handling.
 
-These tests do not spend real Hedera funds.
+Unit tests do not spend real Hedera funds. Live settlement must be verified separately with a controlled Testnet transaction.
 
 ### Provider
 
@@ -71,10 +71,10 @@ These tests do not spend real Hedera funds.
 4. Confirm tool usage counters and Resources actions.
 5. Use **Import MCP** and verify the generated configuration has the expected endpoint.
 6. Run the free guidance tool.
-7. In demo mode, run a premium tool and confirm `DEMO_MODE` settlement.
-8. Inspect the admin ledger and confirm the usage state.
+7. Run one controlled premium tool call and confirm the Hedera settlement.
+8. Inspect the admin ledger, transaction ID, and HashScan link.
 
-Do not run a live premium call merely to test the UI. Use `DEMO_MODE=true` unless the test explicitly targets Hedera Testnet settlement.
+Do not spend funds for a UI-only check. Use the isolated testing configuration described in [Configuration](CONFIGURATION.md) when payment behavior is not part of the test.
 
 ## Acceptance checklist
 
@@ -86,7 +86,7 @@ Do not run a live premium call merely to test the UI. Use `DEMO_MODE=true` unles
 - [ ] Successful premium calls contain transaction and x402 metadata.
 - [ ] Idempotent replay does not execute a second payment.
 - [ ] Participant dashboard does not expose organizer private keys.
-- [ ] Demo mode does not claim an on-chain transaction.
+- [ ] Live settlement metadata includes a transaction ID and HashScan link.
 
 ## CI recommendation
 

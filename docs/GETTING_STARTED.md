@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide takes a contributor from a clean checkout to a working HackRails demo.
+This guide takes a contributor from a clean checkout to a working HackRails environment with real Hedera Testnet settlement enabled by default.
 
 ## Quick path: Docker
 
@@ -22,14 +22,19 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Set a local admin key in `.env`:
+Set the local admin key and live Hedera configuration in `.env`:
 
 ```dotenv
 DEMO_ADMIN_KEY=use-a-local-value
-DEMO_MODE=true
+DEMO_MODE=false
+HEDERA_ACCOUNT_ID=0.0.x
+HEDERA_PRIVATE_KEY=your-private-key
+HEDERA_RECIPIENT_ACCOUNT_ID=0.0.y
 ```
 
-Do not commit `.env`. It may contain Hedera credentials when live mode is enabled.
+Do not commit `.env`. It contains Hedera credentials.
+
+For isolated UI or non-payment testing only, set `DEMO_MODE=true`. That path is not the standard runtime configuration.
 
 ### 2. Build and start the stack
 
@@ -38,7 +43,7 @@ npm install
 docker compose up --build -d --wait
 ```
 
-The API creates the demo event and participants automatically when the database is empty.
+The API creates the event and participants automatically when the database is empty.
 
 ### 3. Open the interfaces
 
@@ -82,7 +87,7 @@ Local Node processes expect PostgreSQL at `localhost:5432`; the first command st
 | Command | Purpose |
 | --- | --- |
 | `npm run dev` | Start all four Node services in watch mode |
-| `npm run seed` | Reset the demo database; requires `DEMO_MODE=true` |
+| `npm run seed` | Reset test fixtures; requires `DEMO_MODE=true` |
 | `npm run build` | Build shared, provider, API, MCP, and web packages |
 | `npm run typecheck` | Typecheck every workspace |
 | `npm run test` | Run provider and API tests |
@@ -92,7 +97,7 @@ Local Node processes expect PostgreSQL at `localhost:5432`; the first command st
 | `docker compose down` | Stop containers without deleting the database volume |
 | `docker compose down -v` | Stop containers and delete local PostgreSQL data |
 
-## First demo walkthrough
+## First end-to-end walkthrough
 
 1. Open the admin dashboard at `/`.
 2. Enter the admin key.
@@ -111,8 +116,8 @@ Check:
 
 - PostgreSQL is reachable;
 - `DEMO_ADMIN_KEY` is set;
-- `DEMO_MODE=true` for demo mode;
-- `HEDERA_RECIPIENT_ACCOUNT_ID` is set when `DEMO_MODE=false`.
+- `DEMO_MODE=false` or explicitly configured for isolated testing;
+- `HEDERA_ACCOUNT_ID`, `HEDERA_PRIVATE_KEY`, and `HEDERA_RECIPIENT_ACCOUNT_ID` are set.
 
 ```bash
 docker compose logs postgres

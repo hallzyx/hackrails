@@ -8,7 +8,7 @@ services:
     build: { context: ., dockerfile: apps/provider/Dockerfile }
     environment:
       PORT: 4002
-      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_MODE: ${DEMO_MODE:-false}
       X402_FACILITATOR_URL: ${X402_FACILITATOR_URL:-https://api.testnet.blocky402.com}
       HEDERA_NETWORK: ${HEDERA_NETWORK:-hedera:testnet}
       HEDERA_USDC_TOKEN_ID: ${HEDERA_USDC_TOKEN_ID:-0.0.429274}
@@ -21,7 +21,7 @@ services:
     environment:
       PORT: 4000
       DATABASE_URL: postgresql://hackrails:hackrails@postgres:5432/hackrails
-      DEMO_MODE: ${DEMO_MODE:-true}
+      DEMO_MODE: ${DEMO_MODE:-false}
       DEMO_ADMIN_KEY: ${DEMO_ADMIN_KEY:?Set DEMO_ADMIN_KEY for the local demo}
       CORS_ORIGIN: ${CORS_ORIGIN:-http://localhost:3000}
       PREMIUM_SERVICE_URL: http://provider:4002

@@ -9,6 +9,25 @@ HackRails exposes a remote MCP server plus an optional Agent Skill. They solve d
 3. Configure the participant bearer token.
 4. Use `get_event_guidance` before premium tools when required context is missing.
 
+```mermaid
+sequenceDiagram
+    participant Agent as Coding agent
+    participant MCP as Remote MCP
+    participant API as Sponsor Gateway
+    participant Provider as x402 provider
+    participant Chain as Hedera Testnet
+
+    Agent->>MCP: tools/call + bearer token
+    MCP->>API: Validate and forward request
+    API->>Provider: Premium resource request
+    Provider-->>API: 402 payment challenge
+    API->>Chain: Settle sponsored payment
+    API->>Provider: Retry with payment headers
+    Provider-->>API: Structured result
+    API-->>MCP: Result + settlement metadata
+    MCP-->>Agent: Tool result
+```
+
 ## MCP server
 
 The MCP HTTP endpoint is:

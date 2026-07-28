@@ -22,12 +22,14 @@ On Windows PowerShell:
 Copy-Item .env.example .env
 ```
 
-Set a local admin key in `.env` before starting:
+Set the local admin key and keep real Hedera settlement as the default:
 
 ```dotenv
 DEMO_ADMIN_KEY=use-a-local-demo-key
-DEMO_MODE=true
+DEMO_MODE=false
 ```
+
+With `DEMO_MODE=false`, premium calls use real Hedera Testnet transactions. Set `DEMO_MODE=true` only when testing UI or non-payment flows without spending funds.
 
 Open:
 
@@ -47,7 +49,7 @@ README is the entry point. Continue with the document that matches the work you 
 | --- | --- |
 | [Architecture](docs/ARCHITECTURE.md) | Understand services, trust boundaries, request flows, and data ownership |
 | [Getting Started](docs/GETTING_STARTED.md) | Install, start, verify, and troubleshoot a local stack |
-| [Configuration](docs/CONFIGURATION.md) | Configure demo mode, live mode, services, and secrets |
+| [Configuration](docs/CONFIGURATION.md) | Configure settlement, services, and secrets |
 | [MCP and Agent Skill](docs/MCP_AND_AGENT_SKILL.md) | Connect a coding agent and understand the available tools |
 | [x402 and Hedera](docs/X402_HEDERA.md) | Enable or debug canonical Testnet settlement |
 | [Operations](docs/OPERATIONS.md) | Run resets, seed activity, inspect logs, and operate the demo |
@@ -102,15 +104,9 @@ Premium provider :4002 ───── x402 facilitator ───── Hedera T
 
 The web dashboard runs on port 3000 and talks to the API. See [Architecture](docs/ARCHITECTURE.md) for the complete flow and trust model.
 
-## Demo mode and live mode
+## Settlement configuration
 
-### Demo mode
-
-`DEMO_MODE=true` uses deterministic local receipts. It is safe for UI review, local development, and automated tests. It does not create blockchain transactions.
-
-### Live mode
-
-`DEMO_MODE=false` enables canonical x402 Testnet settlement and requires:
+`DEMO_MODE=false` is the default and enables canonical x402 Testnet settlement. It requires:
 
 ```dotenv
 HEDERA_ACCOUNT_ID=0.0.x
@@ -118,7 +114,7 @@ HEDERA_PRIVATE_KEY=...
 HEDERA_RECIPIENT_ACCOUNT_ID=0.0.y
 ```
 
-The private key stays API-only. Read [x402 and Hedera](docs/X402_HEDERA.md) before enabling live mode.
+The private key stays API-only. Read [x402 and Hedera](docs/X402_HEDERA.md) for the real settlement flow.
 
 ## Repository map
 
@@ -149,7 +145,7 @@ npm run build
 docker compose config --quiet
 ```
 
-`npm run dev` starts API, provider, MCP, and web concurrently. `npm run seed` resets the local demo database and requires `DEMO_MODE=true`.
+`npm run dev` starts API, provider, MCP, and web concurrently. The standard stack expects real Hedera configuration.
 
 ## Project status and scope
 
@@ -158,7 +154,7 @@ The repository is a production-shaped MVP. The current scope includes:
 - organizer-backed strategy and submission validators;
 - participant bearer access and dashboard;
 - free and premium MCP tools;
-- deterministic demo receipts;
+- canonical Hedera x402 settlement;
 - canonical Hedera x402 buyer/provider flow;
 - usage reservations, idempotency, failure recovery, and dashboard metrics;
 - downloadable Agent Skill and MCP import configurations.

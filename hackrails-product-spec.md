@@ -212,7 +212,7 @@ El MVP debe demostrar una sola tesis:
 10. Hedera Testnet.
 11. Métricas.
 12. Historial de transacciones.
-13. Modo demo reiniciable.
+13. Sesiones de evento y trazabilidad.
 
 ---
 
@@ -236,7 +236,7 @@ Hedera x402 Bounty
 - límites por equipo;
 - herramientas habilitadas;
 - fuentes del organizador;
-- participantes demo;
+- participantes iniciales;
 - wallet pagadora;
 - wallet receptora;
 - configuración x402.
@@ -254,7 +254,7 @@ Organizer Knowledge
 ✓ Official submission validator
 ```
 
-Estas fuentes pueden estar sembradas en la base de datos o almacenadas como archivos de demostración.
+Estas fuentes se almacenan como archivos versionados del organizador y se cargan en el runtime del API.
 
 ---
 
@@ -435,7 +435,7 @@ El MCP tendrá exactamente tres herramientas.
 
 **Tipo:** premium económica.
 
-**Precio demo sugerido:** `0.01 USDC`.
+**Precio inicial del MVP:** `0.01 USDC`.
 
 **Objetivo:** evaluar una idea contra conocimiento exclusivo o curado del organizador.
 
@@ -500,7 +500,7 @@ Recommended next actions
 
 **Tipo:** premium principal.
 
-**Precio demo sugerido:** `0.05 USDC`.
+**Precio inicial del MVP:** `0.05 USDC`.
 
 **Objetivo:** auditar una entrega usando reglas, conocimiento del organizador y validadores.
 
@@ -709,7 +709,7 @@ Cada equipo recibe:
 ```text
 Team Agentard
 Participant ID: team_001
-Access token: hxp_demo_xxxxx
+Access token: hxp_participant_xxxxx
 Sponsored allowance: 0.20 USDC
 ```
 
@@ -721,7 +721,7 @@ Configuración MCP:
     "hackrails": {
       "url": "https://api.hackrails.example/mcp",
       "headers": {
-        "Authorization": "Bearer hxp_demo_xxxxx"
+        "Authorization": "Bearer hxp_participant_xxxxx"
       }
     }
   }
@@ -747,7 +747,7 @@ Nunca incluir:
 
 ## 16. Políticas de uso
 
-Configuración demo recomendada:
+Configuración inicial recomendada:
 
 ```text
 Event budget:              100.00 USDC
@@ -893,75 +893,31 @@ Transaction: 0.0.xxxxx@...
 
 ---
 
-## 20. Modo demo reiniciable
+## 20. Event session lifecycle
 
-El sistema debe permitir múltiples pruebas sin contaminar la demo final.
-
-### Restricción
-
-Las transacciones de Hedera no se pueden borrar.
-
-Por ello se usa una sesión de demo interna.
+Las transacciones de Hedera no se pueden borrar. Por eso cada evento mantiene sesiones de operación que permiten separar periodos de actividad sin alterar el historial de settlement.
 
 ### Entidad conceptual
 
 ```json
 {
   "event_id": "hedera-x402-demo",
-  "demo_session_id": "demo-2026-07-23-001",
+  "demo_session_id": "hedera-x402-2026-07-23-001",
   "initial_budget": 100,
   "spent_in_session": 0,
   "status": "DRAFT"
 }
 ```
 
-### Reset demo environment
+### Session transition
 
-Debe:
+1. Create the event session with its budget and enabled tools.
+2. Activate participant access.
+3. Reserve and settle premium calls through x402.
+4. Close the session without deleting its ledger records.
+5. Start a new session when the organizer needs a clean operational period.
 
-1. pausar MCP;
-2. cerrar sesión anterior;
-3. crear nueva `demo_session`;
-4. borrar o archivar registros locales de la sesión;
-5. reiniciar participantes demo;
-6. reiniciar cuotas;
-7. reiniciar métricas;
-8. restaurar presupuesto interno;
-9. mantener fuentes y configuración;
-10. volver a `DRAFT`.
-
-### Endpoints sugeridos
-
-```http
-POST /admin/demo/reset
-POST /admin/demo/seed
-```
-
-Solo disponibles con:
-
-```text
-DEMO_MODE=true
-```
-
-### Seed demo data
-
-Opcionalmente sembrar:
-
-```text
-Participants: 41
-Calls: 135
-Spent: 3.36 USDC
-```
-
-Luego las llamadas reales cambian:
-
-```text
-Participants: 42
-Calls: 137
-Spent: 3.42 USDC
-```
-
-La UI debe identificar los datos sembrados como actividad demo.
+The UI identifies session boundaries and preserves transaction history for auditability.
 
 ---
 
@@ -976,7 +932,7 @@ Strategy validations: 1 / 3
 Submission audits: 1 / 2
 Status: Active
 
-Team Demo Two
+Team Builder Two
 Spent: 0.02 / 0.20 USDC
 Strategy validations: 2 / 3
 Submission audits: 0 / 2
@@ -988,7 +944,7 @@ Acciones mínimas:
 ```text
 [ Copy MCP access ]
 [ Pause access ]
-[ Reset demo usage ]
+[ Reset participant usage ]
 ```
 
 No implementar gestión organizacional compleja.
@@ -1149,7 +1105,7 @@ POST /api/participants/:participantId/resume
 POST /api/participants/:participantId/reset-demo-usage
 ```
 
-### Demo
+### Administrative controls
 
 ```http
 POST /api/admin/demo/reset
@@ -1211,7 +1167,7 @@ flowchart LR
 
 ## 25. Separación económica
 
-Para la demo se deben representar actores económicos distintos:
+Para el evento se deben representar actores económicos distintos:
 
 - wallet del organizador: pagadora;
 - wallet del proveedor: receptora;
@@ -1251,7 +1207,7 @@ Organizer Budget Wallet
 - logs de auditoría;
 - nunca devolver secretos;
 - separar rutas admin;
-- deshabilitar endpoints demo fuera de `DEMO_MODE`.
+- proteger los endpoints administrativos de sesión y fixtures con autorización.
 
 ### Privacidad
 
@@ -1583,15 +1539,14 @@ Mitigación:
 
 - tres herramientas;
 - un evento;
-- dos participantes demo;
+- dos participantes iniciales;
 - una sola historia.
 
 ### Riesgo 4: dashboard vacío
 
 Mitigación:
 
-- seed demo data;
-- actividad identificada como demo;
+- actividad identificada por sesión;
 - llamadas reales que actualizan métricas.
 
 ### Riesgo 5: pagos duplicados

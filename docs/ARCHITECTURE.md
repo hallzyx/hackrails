@@ -82,16 +82,7 @@ The provider must not receive the organizer private key. The API is the x402 buy
 4. API returns the organizer-backed event guidance response directly.
 5. No x402 payment is created.
 
-### Premium tool in demo mode
-
-1. API authenticates the participant and locks the idempotency scope.
-2. API checks all quotas and inserts a `PENDING` reservation.
-3. The shared validator runs locally through the deterministic demo path.
-4. API records a deterministic demo receipt and marks the usage `SETTLED`.
-
-`DEMO_MODE=true` does not represent a blockchain payment.
-
-### Premium tool in live mode
+### Premium tool payment flow
 
 1. API authenticates the participant and reserves capacity atomically.
 2. API calls the provider without a payment signature.
@@ -104,6 +95,34 @@ The provider must not receive the organizer private key. The API is the x402 buy
 9. API records transaction and HashScan data and marks the usage `SETTLED`.
 
 On provider or settlement failure, the reservation is released and the usage becomes `FAILED`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Coding agent
+    participant MCP as HackRails MCP
+    participant API as Sponsor Gateway
+    participant DB as PostgreSQL ledger
+    participant Provider as x402 provider
+    participant Facilitator as x402 facilitator
+    participant Hedera as Hedera Testnet
+
+    Agent->>MCP: tools/call + bearer token
+    MCP->>API: Forward tool, payload, idempotency key
+    API->>DB: Authenticate and reserve quotas
+    API->>Provider: Premium request without payment
+    Provider-->>API: 402 Payment Required
+    API->>API: Validate amount, asset, network, recipient
+    API->>Facilitator: Submit signed Hedera payment
+    Facilitator->>Hedera: Settle USDC transfer
+    Hedera-->>Facilitator: Transaction receipt
+    Facilitator-->>API: Payment response
+    API->>Provider: Retry with payment headers
+    Provider-->>API: Premium result
+    API->>DB: Mark usage SETTLED + receipt
+    API-->>MCP: Structured result
+    MCP-->>Agent: Tool result + transaction metadata
+```
 
 ## Policy and ledger model
 
@@ -123,6 +142,21 @@ The current daily participant cap is derived from the configured premium catalog
 ```
 
 The daily window starts at midnight in the PostgreSQL session timezone. The Dockerized PostgreSQL instance currently uses UTC.
+
+```mermaid
+flowchart TD
+    Request[Premium request] --> Auth{Valid participant token?}
+    Auth -- No --> RejectAuth[401 Unauthorized]
+    Auth -- Yes --> Status{Event and team active?}
+    Status -- No --> RejectStatus[REJECTED]
+    Status -- Yes --> Tool[Load tool price and max_calls]
+    Tool --> Quotas{All quota checks pass?}
+    Quotas -- No --> RejectQuota[REJECTED\nNo payment]
+    Quotas -- Yes --> Reserve[Insert PENDING\nreserve capacity]
+    Reserve --> Payment[Run x402 payment flow]
+    Payment -- Failure --> Failed[FAILED\nrelease reservation]
+    Payment -- Success --> Settled[SETTLED\nstore receipt and result]
+```
 
 ### Usage states
 

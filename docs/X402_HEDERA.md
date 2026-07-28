@@ -1,6 +1,6 @@
 # x402 and Hedera Settlement
 
-This document explains the live premium payment path. Read it before setting `DEMO_MODE=false`.
+This document explains the canonical premium payment path used by the application.
 
 ## Quick path
 
@@ -25,7 +25,6 @@ The participant is not a payer and does not need a wallet.
 ## Required configuration
 
 ```dotenv
-DEMO_MODE=false
 X402_FACILITATOR_URL=https://api.testnet.blocky402.com
 HEDERA_NETWORK=hedera:testnet
 HEDERA_USDC_TOKEN_ID=0.0.429274
@@ -82,14 +81,23 @@ The ledger stores:
 - x402 state;
 - result payload.
 
-## Demo mode versus live mode
+```mermaid
+sequenceDiagram
+    participant API as HackRails API
+    participant Provider as Premium provider
+    participant Facilitator as x402 facilitator
+    participant Hedera as Hedera Testnet
 
-| Mode | Blockchain transaction | Provider path | Intended use |
-| --- | ---: | --- | --- |
-| `DEMO_MODE=true` | No | Deterministic local receipt | Local development and demos |
-| `DEMO_MODE=false` | Yes | Canonical x402 facilitator flow | Hedera Testnet integration |
-
-Demo receipts are deliberately labeled with `DEMO_MODE`. They must not be presented as on-chain proof.
+    API->>Provider: POST premium resource
+    Provider-->>API: 402 + PAYMENT-REQUIRED
+    API->>API: Validate exact requirement
+    API->>Facilitator: Signed payment payload
+    Facilitator->>Hedera: Settle USDC transfer
+    Hedera-->>Facilitator: Transaction ID
+    Facilitator-->>API: PAYMENT-RESPONSE
+    API->>Provider: Retry with payment headers
+    Provider-->>API: Resource result
+```
 
 ## Failure behavior
 

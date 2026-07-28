@@ -2,17 +2,9 @@
 
 HackRails uses one root `.env` file for local development and Docker Compose interpolation. Copy `.env.example` to `.env` and keep secrets out of source control.
 
-## Configuration modes
+## Settlement configuration
 
-### Demo mode
-
-```dotenv
-DEMO_MODE=true
-```
-
-Premium calls use deterministic local receipts. No blockchain transaction is created. This mode is intended for local demos, UI review, and automated tests.
-
-### Live x402 mode
+Real Hedera Testnet settlement is the default runtime behavior:
 
 ```dotenv
 DEMO_MODE=false
@@ -21,14 +13,16 @@ HEDERA_PRIVATE_KEY=your-hedera-private-key
 HEDERA_RECIPIENT_ACCOUNT_ID=0.0.y
 ```
 
-Live mode requires a funded Hedera account, a valid facilitator, and a reachable provider. The private key is consumed only by the API process.
+Premium calls require a funded Hedera account, a valid facilitator, and a reachable provider. The private key is consumed only by the API process.
+
+Set `DEMO_MODE=true` only for isolated UI or non-payment tests where no blockchain transaction should be created. This is not the standard application mode.
 
 ## Environment variables
 
 | Variable | Required | Default | Used by | Notes |
 | --- | ---: | --- | --- | --- |
 | `DATABASE_URL` | Local | `postgresql://hackrails:hackrails@localhost:5432/hackrails` | API | PostgreSQL connection string |
-| `DEMO_MODE` | No | `true` in Compose | API/provider | `true` avoids real settlement |
+| `DEMO_MODE` | No | `false` | API/provider | Set `true` only for isolated non-payment testing |
 | `DEMO_ADMIN_KEY` | Yes for admin actions | — | API | Local admin control key; never use a shared production secret |
 | `USAGE_RESERVATION_TIMEOUT_MS` | No | `300000` | API | Stale `PENDING` reservation timeout |
 | `CORS_ORIGIN` | No | `http://localhost:3000` | API/provider | Comma-separated allowed origins |
@@ -49,7 +43,7 @@ The API requires:
 
 - `DATABASE_URL`;
 - `DEMO_ADMIN_KEY` for protected admin endpoints;
-- `DEMO_MODE=true`, or all live Hedera buyer variables;
+- all live Hedera buyer variables;
 - `PREMIUM_SERVICE_URL` to reach the provider.
 
 ### Provider
@@ -107,7 +101,7 @@ Tool editing is not yet exposed in the admin dashboard. Prices are currently dup
 - [ ] `.env` is ignored by Git.
 - [ ] Private keys are present only in the API environment.
 - [ ] The provider has no `HEDERA_PRIVATE_KEY`.
-- [ ] `DEMO_MODE=false` is used only with a deliberately funded testnet account.
+- [ ] `DEMO_MODE=false` is used with a deliberately funded Testnet account.
 - [ ] `DEMO_ADMIN_KEY` is not reused outside local development.
 - [ ] Logs and screenshots do not contain bearer tokens or private keys.
 
