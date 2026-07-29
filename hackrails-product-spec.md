@@ -1,10 +1,26 @@
 # HackRails — Product & MVP Specification
 
-> **Source-of-truth document for implementation**
+> **Product and implementation boundary document**
 >
-> This file summarizes HackRails' product, UX, architecture, payment, metrics, and MVP scope decisions. Any significant implementation change must be explicitly recorded in a decisions section or ADR.
+> This file preserves HackRails' product vision while distinguishing the implemented MVP from future design. When this document conflicts with the repository, the current implementation and the current limitations documented in `docs/SECURITY.md` and `docs/TESTING.md` are authoritative.
 
 ---
+
+## Current implementation status
+
+> **MVP status:** The core HackRails MVP is implemented and runnable. It includes one fixed event, one remote MCP, one free tool, two premium tools, participant tokens, policy enforcement, dashboards, lifecycle controls, demo controls, and x402/Hedera settlement plumbing.
+>
+> **Runtime modes:** `DEMO_MODE=false` is the default and performs real Hedera Testnet x402 settlement when the live account, provider, facilitator, and database configuration are present. `DEMO_MODE=true` fabricates premium receipts instead of creating blockchain transactions and enables the reset/seed demo controls.
+
+| Area | Current implementation | Future or aspirational design |
+| --- | --- | --- |
+| Event | Fixed event ID `hedera-x402-demo`; display name `Hedera x402 Builder Sprint`; two seeded participants | Full event authoring and multiple independently configured events |
+| Tools and policy | Fixed catalog, prices, and limits in the API/provider: one free tool, two premium tools | Organizer-configurable catalog, pricing, quotas, and provider marketplace |
+| Organizer knowledge | Curated files under `organizer-knowledge/` loaded by the validators | Organizer source upload, approval, versioning, and per-event management |
+| Audit | Public GitHub and submitted evidence checks, HashScan/Mirror Node checks, and curated organizer checks | Video/demo validation, broader repository analysis, and exact end-to-end evidence correlation |
+| Operations | Organizer dashboard, participant dashboard, event and participant lifecycle controls, and demo reset/seed controls | Full registration, roles, audit log, rate limiting, and production hardening |
+
+Later sections use **Current MVP** and **Future** callouts where the distinction matters. Examples and checklists marked **Future** are not claims that the current repository is incomplete.
 
 ## 1. Executive Summary
 
@@ -95,17 +111,9 @@ The ideal architecture combines:
 
 ### 4.1 Organizer
 
-The organizer:
+**Current MVP:** The organizer operates a preloaded event with a fixed budget, fixed tool catalog, fixed prices and limits, two seeded participants, a dashboard, and lifecycle controls. The organizer can enable, pause, and resume participant access; reveal participant access; copy MCP configuration; pause/resume a participant; reset that participant's demo usage; inspect metrics; and review transactions.
 
-- configures the event;
-- uploads or approves official sources;
-- defines the budget;
-- enables or pauses access;
-- configures prices and limits;
-- distributes MCP access;
-- monitors metrics;
-- reviews transactions;
-- funds usage.
+**Future:** Organizer authoring will support creating events, uploading or approving versioned sources, defining budgets, configuring prices and quotas, managing a catalog, and distributing access without code or fixture changes.
 
 ### 4.2 Participant or Team
 
@@ -190,13 +198,17 @@ sequenceDiagram
     A-->>P: Findings and actions
 ```
 
+This sequence describes the live path. In `DEMO_MODE=true`, the policy and ledger flow still runs, but the premium provider result and receipt are fabricated and no Hedera settlement occurs.
+
 ---
 
 ## 7. Exact MVP Scope
 
+> **Current MVP:** The following scope is implemented in the repository. It is a fixed/preloaded vertical slice, not a general-purpose event management product.
+
 The MVP must demonstrate one thesis:
 
-> An organizer can fund agentic tools consumed by participants, enforce programmable policies, and settle every premium use through x402 on Hedera.
+> An organizer can fund agentic tools consumed by participants, enforce programmable policies, and, in live mode, settle every premium use through x402 on Hedera.
 
 ### Required Components
 
@@ -218,28 +230,36 @@ The MVP must demonstrate one thesis:
 
 ## 8. Preloaded Event
 
-The MVP will not implement full onboarding.
+The MVP does not implement full onboarding or event authoring.
 
-The system starts with an already configured event, for example:
+The system starts with this already configured event:
 
 ```text
-Hedera x402 Bounty
+Hedera x402 Builder Sprint
 ```
+
+The canonical runtime values are:
+
+```text
+event_id: hedera-x402-demo
+display_name: Hedera x402 Builder Sprint
+```
+
+The official competition source is referred to as the Hedera x402 Bounty in organizer guidance, but the canonical local event record and dashboard display name are `hedera-x402-demo` / `Hedera x402 Builder Sprint`.
 
 ### Preloaded Data
 
-- name;
-- description;
-- closing date;
-- tracks or category;
-- budget;
-- per-team limits;
-- enabled tools;
-- organizer sources;
-- initial participants;
-- payer wallet;
-- recipient wallet;
-- x402 configuration.
+Current runtime data includes:
+
+- canonical event ID and display name;
+- `DRAFT`, `ACTIVE`, or `PAUSED` status;
+- `100 USDC` event budget and configured account identifiers;
+- fixed three-tool catalog with prices and call limits;
+- two initial participants with allowances and hashed token records;
+- curated organizer knowledge files;
+- x402 provider and facilitator configuration.
+
+Dates, track details, and submission requirements are returned by the free guidance response from the curated event brief; they are not editable event columns in the current database.
 
 ### Visible Premium Sources
 
@@ -254,7 +274,7 @@ Organizer Knowledge
 ✓ Official submission validator
 ```
 
-These sources are stored as versioned organizer files and loaded into the API runtime.
+The current sources are curated files in `organizer-knowledge/` loaded into the shared validator runtime. Source upload, approval, and version management are future organizer capabilities.
 
 ### Demo data notice
 
@@ -275,6 +295,8 @@ These sources are stored as versioned organizer files and loaded into the API ru
 
 ## 9. Event States
 
+> **Current MVP:** `DRAFT`, `ACTIVE`, and `PAUSED` are implemented. A demo reset creates the event in `DRAFT`; when the API starts in live mode with no event, live bootstrap creates the event in `ACTIVE`.
+
 Use only three states:
 
 ```text
@@ -285,7 +307,7 @@ PAUSED
 
 ### DRAFT
 
-- Event ready to be configured.
+- Event is ready to be activated.
 - MCP unavailable to participants.
 - Calls are not accepted.
 - The main screen shows the activation button.
@@ -309,10 +331,12 @@ PAUSED
 
 ## 10. Organizer UX
 
+> **Current MVP:** The dashboard and lifecycle controls below are implemented for the fixed event. Editable event configuration, catalog management, pricing, quotas, and source management remain future work.
+
 ### 10.1 Initial Screen
 
 ```text
-Hedera x402 Bounty
+Hedera x402 Builder Sprint
 
 Status: Ready to launch
 
@@ -335,14 +359,14 @@ When `Enable participant MCP` is clicked:
 
 1. Change `status` to `ACTIVE`.
 2. Enable calls for `event_id`.
-3. Show the MCP endpoint/configuration.
-4. Redirect to the dashboard.
+3. The dashboard exposes the participant MCP configuration and token workflow.
+4. Keep the organizer on the dashboard.
 
 Deploying a new MCP is not necessary. A multi-tenant MCP server is used.
 
 ### 10.3 Dashboard
 
-It must show:
+The current dashboard shows:
 
 - MCP status;
 - allocated budget;
@@ -352,12 +376,14 @@ It must show:
 - total calls;
 - free calls;
 - sponsored calls;
-- spending by tool;
 - average cost per participant;
-- missing requirements detected;
-- ready/not-ready projects;
+- derived impact indicators;
 - transaction history;
-- participants and allowances.
+- participants and allowances;
+- failure and policy-rejection counts;
+- usage-by-tool call counts.
+
+The impact indicators are demo metrics/proxies derived from settled tool-call counts. They are not direct audit findings or a substitute for reviewing individual tool results.
 
 ### 10.4 Pause
 
@@ -423,7 +449,6 @@ The MCP will have exactly three tools.
 
 ```json
 {
-  "event_id": "hedera-x402-2026",
   "question": "What must I show in the demo?"
 }
 ```
@@ -475,13 +500,19 @@ Participant idea
 
 ```json
 {
-  "event_id": "hedera-x402-2026",
+  "event_id": "hedera-x402-demo",
+  "project_name": "HackRails",
   "project_summary": "Organizer-funded MCP tools for hackathon participants",
-  "selected_track": "x402",
+  "problem": "Teams need organizer-backed intelligence and paid tools.",
+  "target_users": "Hackathon organizers and participants",
+  "selected_track": "hedera-x402-bounty",
   "planned_integrations": ["x402", "Hedera"],
-  "target_users": "Hackathon organizers and participants"
+  "business_model": null,
+  "current_stage": "MVP"
 }
 ```
+
+`business_model` is optional and nullable. All other fields shown above are required; `current_stage` must be `IDEA`, `PROTOTYPE`, `MVP`, or `READY_TO_SUBMIT`.
 
 #### Expected Output
 
@@ -535,32 +566,33 @@ Repository and submission
 
 ```json
 {
-  "event_id": "hedera-x402-2026",
+  "event_id": "hedera-x402-demo",
+  "project_name": "HackRails",
   "repository_url": "https://github.com/example/hackrails",
-  "project_summary": "...",
-  "demo_url": "...",
-  "track": "x402",
+  "selected_track": "hedera-x402-bounty",
+  "project_summary": "A sponsored agent toolkit using x402 and Hedera.",
   "transaction_links": [
     "https://hashscan.io/testnet/transaction/..."
-  ]
+  ],
+  "submission_url": "https://example.com/submission",
+  "deadline": "2026-07-31T23:59:00.000Z"
 }
 ```
 
-#### Possible Checks
+`submission_url` and `deadline` are optional and nullable. `transaction_links` is optional at the request boundary and defaults to `[]`. The other fields shown above are required. The schema rejects unknown fields, so use `submission_url` rather than `demo_url` and `selected_track` rather than `track`.
 
-- public repository;
-- README;
-- license;
-- installation instructions;
-- demo available;
-- valid links;
-- evidence of the `402 -> payment -> response` flow;
-- Hedera Testnet transaction;
-- distinct payer and recipient wallets;
-- visible x402 integration;
-- event-specific requirements;
-- common disqualification errors;
-- official checklist.
+#### Current Checks
+
+- public GitHub repository accessibility and visibility;
+- GitHub repository metadata and topics;
+- README presence, length, installation keywords, HashScan links, and x402/payment keywords;
+- license presence;
+- submitted public evidence links when supplied; HashScan links are actively fetched and checked, while arbitrary `submission_url` availability is not independently fetched;
+- HashScan URL parsing and Hedera Mirror Node transaction status, network, payer, and receiver checks;
+- event rules, judging criteria, sponsor objectives, previous projects, rejection patterns, and submission checklist knowledge;
+- project evidence in `project_summary` and the submitted transaction links.
+
+The audit does **not** validate a video, whether a demo is available, the initial visible HTTP `402` challenge, exact payment-to-submission correlation, or private repositories. It does not execute arbitrary repository code. An optional `submission_url` is accepted as input but is not a video or browser-availability validator.
 
 #### Expected Output
 
@@ -573,7 +605,7 @@ Blocking issues: 2
 
 Blocking issues
 1. No public HashScan evidence found
-2. Demo does not show the initial HTTP 402 response
+2. Repository README does not mention x402 or payment evidence
 
 Organizer intelligence
 - Missing on-chain evidence is a recurring rejection reason
@@ -581,7 +613,7 @@ Organizer intelligence
 
 Recommended actions
 1. Add HashScan transaction link
-2. Record the full x402 lifecycle
+2. Describe the x402 lifecycle and settlement evidence in the README
 3. Add installation instructions
 ```
 
@@ -636,6 +668,8 @@ The Skill does not contain the complete premium knowledge. Premium knowledge liv
 
 The Sponsor Gateway is the economic core.
 
+> **Current implementation:** In live mode, the API is the x402 buyer/sponsor: it reserves capacity, calls the provider, validates the payment requirement, submits settlement through the facilitator, retries the provider request, and records the result. In `DEMO_MODE=true`, the same policy and ledger path runs, but premium receipts are fabricated and no Hedera transaction is created.
+
 ### Minimum Responsibilities
 
 1. authenticate the participant;
@@ -679,6 +713,8 @@ Persist result and transaction
 Return response
 ```
 
+The visible participant result includes the final tool output and transaction metadata. The raw provider challenge is an internal step in the API/provider flow, not a required browser-facing screen.
+
 ### Rejections
 
 If the policy check fails:
@@ -719,7 +755,9 @@ Do not implement:
 
 ### Minimum Credential
 
-Each team receives:
+**Current MVP:** Two preloaded teams receive fixed demo access tokens. The API stores SHA-256 token hashes; the organizer-only token route reveals a token for the demo workflow. Participants do not receive wallet credentials.
+
+Example participant record:
 
 ```text
 Team Agentard
@@ -743,9 +781,9 @@ MCP configuration:
 }
 ```
 
-### Token
+### Future Token Design
 
-It may be:
+For a production registration system, the token may be:
 
 - signed JWT;
 - random API key;
@@ -762,7 +800,7 @@ Never include:
 
 ## 16. Usage Policies
 
-Recommended initial configuration:
+Current fixed catalog and limits:
 
 ```text
 Event budget:              100.00 USDC
@@ -834,14 +872,15 @@ This prevents concurrent calls from spending the same balance.
 
 Metrics are mandatory.
 
+> **Current MVP:** The organizer dashboard exposes aggregate budget and consumption, call totals, participants, usage-by-tool call counts, failed payments, policy rejections, transaction rows, and derived impact indicators. The participant dashboard exposes only that participant's event, budget, tool availability, and usage counters.
+
 ### 18.1 Financial Metrics
 
 - allocated budget;
 - spent budget;
 - remaining budget;
 - average cost per participant;
-- spending by tool;
-- number of payments;
+- settled sponsored-call count;
 - failed payments;
 - policy-rejected payments.
 
@@ -858,13 +897,14 @@ Metrics are mandatory.
 
 ### 18.3 Impact Metrics
 
-Minimum:
+The current dashboard displays these derived demo indicators:
 
 - missing requirements detected;
 - submissions audited;
 - ready submissions;
-- not-ready submissions;
 - blocking issues detected.
+
+These are proxies, not direct audit findings. The current implementation derives them from settled strategy-validation and audit call counts (`requirementsMissing` is two per settled strategy call, `submissionsReady` is a bounded count, and `blockersFound` follows audit count). Individual validator results remain the evidence for an actual finding.
 
 ### Example
 
@@ -910,7 +950,7 @@ Transaction: 0.0.xxxxx@...
 
 ## 20. Event Session Lifecycle
 
-Hedera transactions cannot be deleted. Therefore, each event maintains operational sessions that separate activity periods without altering the settlement history.
+Hedera transactions cannot be deleted, but the current local demo reset is destructive. It deletes local usage records, participants, demo sessions, tools, and events in `DEMO_MODE=true`, then creates a new DRAFT event and open live demo session. Any Hedera transactions already created remain immutable on-chain, but their local ledger rows are not preserved through reset. The seed action can then add fabricated historical activity to a separate closed local session.
 
 ### Conceptual Entity
 
@@ -926,17 +966,19 @@ Hedera transactions cannot be deleted. Therefore, each event maintains operation
 
 ### Session Transition
 
-1. Create the event session with its budget and enabled tools.
-2. Activate participant access.
-3. Reserve and settle premium calls through x402.
-4. Close the session without deleting its ledger records.
-5. Start a new session when the organizer needs a clean operational period.
+1. Demo reset deletes the current local event/session data and creates a new event in `DRAFT`.
+2. The organizer activates participant access.
+3. The API reserves and settles premium calls through x402, or fabricates receipts in demo mode.
+4. Demo seed may add a closed, fabricated historical session for dashboard presentation.
+5. In live mode, startup bootstraps the canonical event directly in `ACTIVE` when no event exists.
 
-The UI identifies session boundaries and preserves transaction history for auditability.
+The UI identifies the current or seeded session. On-chain transaction history remains on Hedera; local history is preserved only until a demo reset deletes it.
 
 ---
 
 ## 21. Participant Dashboard
+
+> **Current MVP:** The participant-facing `/team` dashboard is read-only. It supports authentication, refresh, `Import MCP`, and `Download Skill`; it does not expose participant pause or usage-reset controls. The organizer dashboard, not the participant dashboard, exposes `Copy MCP`, participant pause/resume, and `Reset usage` actions.
 
 Minimum section:
 
@@ -954,12 +996,21 @@ Submission audits: 0 / 2
 Status: Active
 ```
 
-Minimum actions:
+Current participant actions:
 
 ```text
-[ Copy MCP access ]
-[ Pause access ]
-[ Reset participant usage ]
+[ Refresh ]
+[ Import MCP / Copy config ]
+[ Download Skill ]
+```
+
+Organizer-only participant controls:
+
+```text
+[ Reveal access ]
+[ Copy MCP ]
+[ Pause / Resume ]
+[ Reset usage ]
 ```
 
 Do not implement complex organizational management.
@@ -968,48 +1019,42 @@ Do not implement complex organizational management.
 
 ## 22. Minimum Data Model
 
-### EVENT
+> **Current schema:** PostgreSQL currently defines five tables. The schema is a compact operational ledger for one canonical event; it does not yet implement the full conceptual model below.
+
+### Current `events`
 
 ```text
 id
 name
-slug
-description
 status
 total_budget
 spent_budget
 reserved_budget
 currency
-wallet_account_id
+organizer_account_id
 recipient_account_id
-starts_at
-ends_at
 created_at
-updated_at
 ```
 
-### DEMO_SESSION
+### Current `demo_sessions`
 
 ```text
 id
 event_id
 status
-initial_budget
-spent_budget
-reserved_budget
 seeded
 created_at
 closed_at
 ```
 
-### PARTICIPANT_ACCESS
+### Current `participants`
 
 ```text
 id
 event_id
 demo_session_id
-participant_name
-participant_external_id
+name
+external_id
 token_hash
 allocated_budget
 spent_budget
@@ -1017,34 +1062,64 @@ reserved_budget
 daily_limit
 status
 created_at
-updated_at
 ```
 
-### TOOL
+### Current `tools`
 
 ```text
-id
 name
 description
 type
-handler
+price
+max_calls
 enabled
 ```
 
-### TOOL_POLICY
+Prices and per-tool limits are currently columns on `tools`, not a separate event-specific policy table. The catalog is fixed in the API/provider code and is not editable from the organizer dashboard.
+
+### Current `usage_records`
 
 ```text
 id
 event_id
-tool_id
+demo_session_id
+participant_id
+tool_name
+idempotency_key
 price
-currency
-max_calls_per_participant
-daily_call_limit
-enabled
+status
+transaction_id
+hashscan_url
+request_payload
+result_payload
+error_code
+seeded
+latency_ms
+created_at
+settled_at
+settlement_mode
+x402_state
+payment_required
+payment_response
+payment_payload_hash
+facilitator_receipt
 ```
 
-### ORGANIZER_SOURCE
+The current database has no `daily_usage` table; daily spend is calculated from usage records. Organizer knowledge is loaded from files under `organizer-knowledge/`, not from an `organizer_sources` table.
+
+### Future extensions
+
+The following conceptual entities remain useful for a configurable platform but are not current tables:
+
+```text
+EVENT extensions: slug, description, starts_at, ends_at, updated_at
+DEMO_SESSION extensions: initial_budget, spent_budget, reserved_budget
+TOOL_POLICY: event_id, tool_id, price, currency, max_calls_per_participant, daily_call_limit, enabled
+ORGANIZER_SOURCE: event_id, name, type, visibility, content_location, version, enabled, created_at
+DAILY_USAGE: participant_id, date, spent, call_count
+```
+
+If future organizer source management is implemented, its conceptual record may include:
 
 ```text
 id
@@ -1058,91 +1133,50 @@ enabled
 created_at
 ```
 
-### USAGE_RECORD
-
-```text
-id
-event_id
-demo_session_id
-participant_id
-tool_id
-idempotency_key
-price
-status
-transaction_id
-hashscan_url
-request_payload
-result_payload
-error_code
-created_at
-settled_at
-```
-
-### DAILY_USAGE
-
-Optional to simplify queries:
-
-```text
-participant_id
-date
-spent
-call_count
-```
-
 ---
 
-## 23. Suggested API
+## 23. API Surface
 
-### Event
+> **Current API:** The routes below are implemented in `apps/api/src/index.ts`. The canonical event parameter is restricted to `hedera-x402-demo`. Routes marked with `X-Admin-Key` require the shared local/demo admin key.
+
+### Current routes
 
 ```http
+GET  /health
+GET  /api/hackrails-skill/download
+GET  /api/participant/dashboard                 # Bearer participant token
+GET  /api/events/:eventId/dashboard
 GET  /api/events/:eventId
-POST /api/events/:eventId/activate
-POST /api/events/:eventId/pause
-POST /api/events/:eventId/resume
+POST /api/events/:eventId/activate              # X-Admin-Key
+POST /api/events/:eventId/pause                 # X-Admin-Key
+POST /api/events/:eventId/resume                # X-Admin-Key
+POST /api/participants/:id/:action              # X-Admin-Key; pause, resume, reset-demo-usage
+GET  /api/events/:eventId/participants/:id/token # X-Admin-Key
+POST /api/admin/demo/reset                      # X-Admin-Key; DEMO_MODE only
+POST /api/admin/demo/seed                       # X-Admin-Key; DEMO_MODE only
+POST /internal/mcp/call                         # Bearer participant token
 ```
 
-### Dashboard
+The participant action route accepts the optional `eventId` query parameter and defaults to `hedera-x402-demo`.
+
+`POST /internal/mcp/call` accepts one of the three MCP tools and validates its payload with the exact schemas in `apps/api/src/input.ts`. The public MCP transport is served separately by `apps/mcp` at `/mcp` and forwards to this internal API route.
+
+At startup, the API runs database migrations and synchronizes the participant daily limit. If no event exists, demo mode calls `resetDemo()` and creates the canonical event in `DRAFT`; the organizer can invoke the separate seed action afterward. Live mode calls `bootstrapLive()` and creates the canonical event in `ACTIVE` state. Live startup requires `HEDERA_RECIPIENT_ACCOUNT_ID`.
+
+### Future API extensions
+
+The following routes describe the intended configurable platform and are **not implemented** today:
 
 ```http
-GET /api/events/:eventId/dashboard
-GET /api/events/:eventId/metrics
-GET /api/events/:eventId/transactions
-GET /api/events/:eventId/participants
-```
-
-### Participants
-
-```http
+POST /api/events
+POST /api/events/:eventId/sources
+PUT  /api/events/:eventId/tools
+GET  /api/events/:eventId/metrics
+GET  /api/events/:eventId/transactions
 POST /api/events/:eventId/participants
-POST /api/participants/:participantId/pause
-POST /api/participants/:participantId/resume
-POST /api/participants/:participantId/reset-demo-usage
 ```
 
-### Administrative Controls
-
-```http
-POST /api/admin/demo/reset
-POST /api/admin/demo/seed
-```
-
-### MCP / Tools
-
-```text
-get_event_guidance
-validate_project_strategy
-audit_submission
-```
-
-### Internal Payments
-
-```http
-POST /internal/sponsor/authorize
-POST /internal/sponsor/reserve
-POST /internal/sponsor/settle
-POST /internal/sponsor/release
-```
+Internal sponsor subroutes such as `/internal/sponsor/authorize`, `/reserve`, `/settle`, and `/release` are also future abstractions, not current public API routes. The current API performs those responsibilities inside the MCP call flow.
 
 ---
 
@@ -1211,18 +1245,20 @@ Organizer Budget Wallet
 
 ## 26. Security and Privacy
 
+> **Current MVP limitations:** The local/demo deployment uses one shared admin key, has no rate limiting, has no admin audit log, and stores the participant token in browser `sessionStorage`. These are known limitations, not production claims. The HTTPS, secret-management, credential rotation, rate-limiting, and structured audit-logging items in the deployment checklist are future hardening work.
+
 ### Security
 
 - private keys only in a secure backend;
 - limited participant tokens;
-- rate limiting;
 - per-tool limits;
 - price validation;
 - idempotency;
-- audit logs;
 - never return secrets;
 - separate admin routes;
 - protect administrative session and fixture endpoints with authorization.
+
+Per-tool limits, price validation, idempotency, secret boundaries, and protected admin routes are current. Rate limiting and administrative audit logs are future hardening.
 
 ### Privacy
 
@@ -1235,6 +1271,8 @@ By default:
 - minimal retention;
 - personal results visible to the participant;
 - avoid presenting the product as surveillance.
+
+The current participant browser flow uses `sessionStorage` for the team token. This is acceptable for the MVP demo but requires stronger browser/session controls before a high-value production event.
 
 ### Judge Information
 
@@ -1319,12 +1357,13 @@ Call `validate_project_strategy`.
 Show:
 
 ```text
-402 Payment Required
-Sponsor policy approved
-0.01 USDC settled on Hedera
+Strategy result
+Settlement mode: HEDERA_X402_FACILITATOR (live) or DEMO_MODE (demo)
+Amount: 0.01 USDC
+Transaction ID and HashScan link when live
 ```
 
-Then show the result.
+The `402 Payment Required` challenge and payment submission occur inside the API/provider flow. Do not imply that the browser visibly presents the raw challenge. Show the final result, amount, settlement mode, and public HashScan evidence when running live.
 
 ### 2:00–2:50 — Premium Audit
 
@@ -1341,7 +1380,8 @@ Show:
 - structured result;
 - blocking issues;
 - cost `0.05 USDC`;
-- transaction ID.
+- settlement mode and transaction ID;
+- public HashScan evidence when running live.
 
 ### 2:50–3:30 — Updated Dashboard
 
@@ -1401,6 +1441,8 @@ Exclude:
 
 ## 29. Optional Features if Time Allows
 
+> **Future:** These are backlog ideas, not current MVP commitments.
+
 Priority after the main flow:
 
 1. `review_architecture`;
@@ -1418,58 +1460,42 @@ Priority after the main flow:
 
 ## 30. MVP Acceptance Criteria
 
-### Event
+The criteria below separate repository implementation from evidence that requires a configured live environment. Future product aspirations are listed separately and are not current MVP failures.
 
-- [ ] A preloaded event exists.
-- [ ] It can be activated.
-- [ ] It can be paused.
-- [ ] It can be resumed.
-- [ ] The status actually affects calls.
+### Implemented / verified in the repository
 
-### MCP
+- [x] A fixed event uses ID `hedera-x402-demo` and display name `Hedera x402 Builder Sprint`.
+- [x] Demo reset creates the event in `DRAFT`; activation, pause, and resume change whether calls are accepted; live bootstrap creates the event in `ACTIVE`.
+- [x] A remote MCP exposes `get_event_guidance`, `validate_project_strategy`, and `audit_submission` with strict schemas.
+- [x] The free tool runs without payment; premium calls use the live x402 provider path when `DEMO_MODE=false` and fabricated receipts when `DEMO_MODE=true`.
+- [x] Participant bearer tokens are hashed for lookup, and fixed participant allowances plus per-tool limits are enforced.
+- [x] Usage records track `PENDING`, `SETTLED`, `FAILED`, and `REJECTED` outcomes; rejected calls do not execute payment.
+- [x] Idempotency keys prevent duplicate settlement and stale reservations are recoverable.
+- [x] The organizer dashboard updates aggregate budget, consumption, calls, participants, tools, transactions, failures, rejections, and derived impact proxies.
+- [x] The participant dashboard is read-only apart from refresh and resource-copy/download actions.
+- [x] Demo-only reset and seed controls exist; reset deletes local demo ledger data and seed creates fabricated historical activity.
 
-- [ ] A remote MCP server exists.
-- [ ] It exposes three tools.
-- [ ] The free tool works without payment.
-- [ ] Both premium tools go through x402.
-- [ ] Responses are structured.
+### Live evidence / manual verification
 
-### Participants
+- [ ] Run a controlled premium call with `DEMO_MODE=false` and a funded Hedera Testnet account.
+- [ ] Confirm the live response contains a transaction ID, settlement metadata, and a public HashScan link.
+- [ ] Confirm payer and provider recipient are distinct accounts in the live transaction.
+- [ ] Show at least two real Testnet settlements in the dashboard or HashScan; seeded demo rows are not real payments.
+- [ ] Run the manual smoke test and demonstrate the final result, amount, settlement mode, and public evidence without presenting the raw internal `402` challenge as a browser UI.
 
-- [ ] Each team has a token.
-- [ ] Each team has an allowance.
-- [ ] Usage is limited by tool.
-- [ ] Usage is recorded.
-- [ ] A rejected call does not pay.
+### Future
 
-### Payments
-
-- [ ] Payer and recipient wallets are separate.
-- [ ] Real payment on Hedera Testnet.
-- [ ] Transaction ID persisted.
-- [ ] HashScan link visible.
-- [ ] Idempotency prevents duplicate payments.
-
-### Dashboard
-
-- [ ] Shows budget.
-- [ ] Shows usage.
-- [ ] Shows participants.
-- [ ] Shows metrics.
-- [ ] Shows transactions.
-- [ ] Updates after calls.
-
-### Demo
-
-- [ ] It can be reset.
-- [ ] Activity can be seeded.
-- [ ] The complete flow fits in under 5 minutes.
-- [ ] At least two real payments remain visible.
-- [ ] The narrative explains why x402 is necessary.
+- [ ] Full organizer registration, event authoring, source upload/versioning, and multiple independently configured events.
+- [ ] Editable tools, prices, quotas, provider catalog, and track budgets.
+- [ ] Video/demo availability validation, broader repository analysis, and exact payment-to-submission correlation.
+- [ ] Production authentication, rate limiting, admin audit logs, stronger browser session controls, and deployment hardening.
+- [ ] Marketplace, external providers, and revenue sharing.
 
 ---
 
-## 31. Recommended Implementation Order
+## 31. Future Implementation Order
+
+> **Future / historical plan:** The vertical-slice sequence below describes how the product could be extended or reconstructed. The current repository already contains the core phases; it is not a checklist of missing MVP work.
 
 ### Phase 1 — Minimum Vertical Slice
 
@@ -1584,7 +1610,9 @@ Mitigation:
 
 ---
 
-## 34. Post-MVP Roadmap
+## 34. Post-MVP Roadmap (Future)
+
+> The roadmap preserves the long-term HackRails thesis. None of the following capabilities should be read as implemented in the current fixed-event MVP.
 
 ### Short Term
 
