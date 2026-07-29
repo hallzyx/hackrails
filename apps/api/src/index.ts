@@ -220,7 +220,10 @@ migrate()
       if (process.env.DEMO_MODE === "true") {
         await resetDemo();
         await syncParticipantDailyLimit();
-      } else await bootstrapLive();
+      } else {
+        await bootstrapLive();
+        await syncParticipantDailyLimit();
+      }
     }
     app.listen(port, () => console.log(`HackRails API listening on ${port}`));
   })
