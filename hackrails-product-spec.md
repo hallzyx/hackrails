@@ -1,26 +1,26 @@
 # HackRails — Product & MVP Specification
 
-> **Documento fuente de verdad para implementación**
+> **Source-of-truth document for implementation**
 >
-> Este archivo resume las decisiones de producto, UX, arquitectura, pagos, métricas y alcance del MVP de HackRails. Cualquier cambio importante durante la implementación debe registrarse explícitamente en una sección de decisiones o ADR.
+> This file summarizes HackRails' product, UX, architecture, payment, metrics, and MVP scope decisions. Any significant implementation change must be explicitly recorded in a decisions section or ADR.
 
 ---
 
-## 1. Resumen ejecutivo
+## 1. Executive Summary
 
-**HackRails** es una infraestructura para hackathons que permite a los organizadores financiar herramientas premium consumidas directamente desde los agentes de programación de los participantes, como Codex o Claude Code.
+**HackRails** is infrastructure for hackathons that allows organizers to fund premium tools consumed directly through participants' coding agents, such as Codex or Claude Code.
 
-Los participantes no pagan. El organizador crea un presupuesto patrocinado y define:
+Participants do not pay. The organizer creates a sponsored budget and defines:
 
-- qué herramientas están disponibles;
-- cuánto cuesta cada herramienta;
-- cuántas veces puede usarla cada equipo;
-- cuánto presupuesto máximo puede consumir cada participante;
-- cuándo el acceso está activo o pausado.
+- which tools are available;
+- how much each tool costs;
+- how many times each team can use it;
+- the maximum budget each participant can consume;
+- when access is active or paused.
 
-Cada llamada premium se procesa mediante un flujo x402 y se liquida en Hedera Testnet. El participante recibe el resultado dentro de su agente, mientras que el organizador ve métricas de uso, consumo, impacto y transacciones.
+Each premium call is processed through an x402 flow and settled on Hedera Testnet. The participant receives the result inside their agent, while the organizer sees usage, spending, impact, and transaction metrics.
 
-### Pitch de una línea
+### One-Line Pitch
 
 > HackRails lets hackathon organizers sponsor premium MCP tools that participants access directly from their coding agents, with programmable usage limits and x402 payments settled on Hedera.
 
@@ -30,142 +30,142 @@ Cada llamada premium se procesa mediante un flujo x402 y se liquida en Hedera Te
 
 ---
 
-## 2. Problema
+## 2. Problem
 
-Los organizadores de hackathons suelen enfrentar:
+Hackathon organizers commonly face:
 
-- preguntas repetitivas sobre reglas, tracks, entregables y fechas;
-- participantes que interpretan mal requisitos importantes;
-- proyectos descalificados por documentación o evidencias incompletas;
-- baja adopción de tecnologías de sponsors;
-- poco conocimiento sobre dónde se atascan los participantes;
-- soporte manual difícil de escalar;
-- poca trazabilidad sobre el uso de herramientas premium;
-- dificultad para financiar capacidades agentic de diferentes proveedores.
+- repetitive questions about rules, tracks, deliverables, and dates;
+- participants who misunderstand important requirements;
+- projects disqualified because of incomplete documentation or evidence;
+- low adoption of sponsor technologies;
+- limited visibility into where participants get stuck;
+- manual support that is difficult to scale;
+- limited traceability into premium tool usage;
+- difficulty funding agentic capabilities from different providers.
 
-Los participantes ya cuentan con modelos potentes capaces de razonar. Por ello, HackRails **no intenta venderles razonamiento genérico**.
+Participants already have powerful reasoning models. Therefore, HackRails **does not try to sell them generic reasoning**.
 
-El valor diferencial está en dar acceso a información y capacidades que el modelo local no tiene:
+The differentiating value is providing access to information and capabilities that the local model does not have:
 
-- conocimiento oficial o curado del organizador;
-- patrones de proyectos ganadores;
-- errores frecuentes de descalificación;
-- aclaraciones oficiales;
-- objetivos de sponsors;
-- validadores técnicos;
-- tests privados o semi-privados;
-- procedimientos estandarizados;
-- resultados verificables;
-- métricas y políticas de consumo.
-
----
-
-## 3. Tesis de producto
-
-### Lo que HackRails NO es
-
-HackRails no es:
-
-- un chatbot genérico para hackathons;
-- un generador de prompts;
-- una tienda de archivos `SKILL.md`;
-- un agente que simplemente lee una URL pública;
-- una plataforma de pago por descargar un ZIP;
-- un reemplazo de Codex o Claude Code;
-- un sistema de DRM para Agent Skills;
-- un marketplace completo en el MVP.
-
-### Lo que HackRails SÍ es
-
-HackRails es:
-
-> Una capa oficial de herramientas, conocimiento y servicios financiados por el organizador y consumidos por los agentes de los participantes.
-
-La arquitectura ideal combina:
-
-- **Agent Skill gratuito:** guía al agente, prepara contexto y decide cuándo usar herramientas.
-- **MCP remoto:** expone herramientas oficiales y premium.
-- **Sponsor Gateway:** aplica políticas y paga las llamadas x402.
-- **Hedera:** liquida y deja trazabilidad de los pagos.
-- **Dashboard:** muestra presupuesto, consumo, herramientas, equipos, métricas e historial de transacciones.
+- official or curated organizer knowledge;
+- winning-project patterns;
+- common disqualification errors;
+- official clarifications;
+- sponsor objectives;
+- technical validators;
+- private or semi-private tests;
+- standardized procedures;
+- verifiable results;
+- usage metrics and policies.
 
 ---
 
-## 4. Actores
+## 3. Product Thesis
 
-### 4.1 Organizador
+### What HackRails Is NOT
 
-El organizador:
+HackRails is not:
 
-- configura el evento;
-- carga o aprueba las fuentes oficiales;
-- define el presupuesto;
-- habilita o pausa el acceso;
-- configura precios y límites;
-- distribuye el acceso MCP;
-- observa métricas;
-- revisa transacciones;
-- financia el consumo.
+- a generic chatbot for hackathons;
+- a prompt generator;
+- a store for `SKILL.md` files;
+- an agent that simply reads a public URL;
+- a pay-to-download-a-ZIP platform;
+- a replacement for Codex or Claude Code;
+- a DRM system for Agent Skills;
+- a full marketplace in the MVP.
 
-### 4.2 Participante o equipo
+### What HackRails IS
 
-El participante:
+HackRails is:
 
-- instala o conecta el MCP;
-- puede usar un Agent Skill gratuito;
-- realiza consultas desde Codex, Claude Code u otro cliente compatible;
-- consume herramientas gratuitas y premium;
-- no gestiona wallets;
-- no firma pagos;
-- no recibe claves privadas;
-- no paga directamente.
+> An official layer of tools, knowledge, and services funded by the organizer and consumed by participants' agents.
 
-### 4.3 Proveedor de herramienta
+The ideal architecture combines:
 
-En el MVP, HackRails puede operar las herramientas.
+- **Free Agent Skill:** guides the agent, prepares context, and decides when to use tools.
+- **Remote MCP:** exposes official and premium tools.
+- **Sponsor Gateway:** enforces policies and pays for x402 calls.
+- **Hedera:** settles payments and provides payment traceability.
+- **Dashboard:** shows budget, spending, tools, teams, metrics, and transaction history.
 
-A futuro, distintos proveedores podrían publicar:
+---
 
-- validadores;
+## 4. Actors
+
+### 4.1 Organizer
+
+The organizer:
+
+- configures the event;
+- uploads or approves official sources;
+- defines the budget;
+- enables or pauses access;
+- configures prices and limits;
+- distributes MCP access;
+- monitors metrics;
+- reviews transactions;
+- funds usage.
+
+### 4.2 Participant or Team
+
+The participant:
+
+- installs or connects to the MCP;
+- can use a free Agent Skill;
+- makes queries from Codex, Claude Code, or another compatible client;
+- consumes free and premium tools;
+- does not manage wallets;
+- does not sign payments;
+- does not receive private keys;
+- does not pay directly.
+
+### 4.3 Tool Provider
+
+In the MVP, HackRails may operate the tools.
+
+In the future, different providers could publish:
+
+- validators;
 - datasets;
 - sandboxes;
-- modelos;
+- models;
 - APIs;
-- análisis especializados;
-- servicios de testing;
-- revisiones de arquitectura.
+- specialized analyses;
+- testing services;
+- architecture reviews.
 
 ### 4.4 Sponsor Gateway
 
-El Sponsor Gateway:
+The Sponsor Gateway:
 
-- identifica evento y participante;
-- verifica políticas;
-- reserva presupuesto;
-- maneja la respuesta `402 Payment Required`;
-- firma y ejecuta el pago;
-- registra la transacción;
-- devuelve el resultado al MCP.
-
----
-
-## 5. Modelo B2B2C
-
-- **Comprador y pagador:** organizador.
-- **Usuario final:** participante.
-- **Cliente técnico:** agente o cliente MCP.
-- **Unidad económica:** llamada premium.
-- **Beneficio para el organizador:** soporte escalable, menos errores y métricas.
-- **Beneficio para el participante:** acceso sin fricción a herramientas oficiales.
-- **Beneficio para el proveedor:** micropagos por capacidad consumida.
+- identifies the event and participant;
+- verifies policies;
+- reserves budget;
+- handles the `402 Payment Required` response;
+- signs and executes the payment;
+- records the transaction;
+- returns the result to the MCP.
 
 ---
 
-## 6. Flujo principal
+## 5. B2B2C Model
+
+- **Buyer and payer:** organizer.
+- **End user:** participant.
+- **Technical client:** agent or MCP client.
+- **Economic unit:** premium call.
+- **Organizer benefit:** scalable support, fewer errors, and metrics.
+- **Participant benefit:** frictionless access to official tools.
+- **Provider benefit:** micropayments for consumed capacity.
+
+---
+
+## 6. Main Flow
 
 ```mermaid
 sequenceDiagram
-    participant P as Participante
+    participant P as Participant
     participant A as Codex / Claude Code
     participant S as Agent Skill
     participant M as HackRails MCP
@@ -173,77 +173,77 @@ sequenceDiagram
     participant T as Premium Tool
     participant H as Hedera Testnet
 
-    P->>A: "Audita mi entrega"
-    A->>S: Lee workflow del evento
-    S->>A: Prepara contexto y recomienda herramienta
+    P->>A: "Audit my submission"
+    A->>S: Reads the event workflow
+    S->>A: Prepares context and recommends a tool
     A->>M: audit_submission(...)
-    M->>G: Autorizar participante y cuota
-    G->>T: Solicitar servicio
+    M->>G: Authorize participant and allowance
+    G->>T: Request service
     T-->>G: HTTP 402 Payment Required
-    G->>G: Validar política y reservar presupuesto
-    G->>H: Ejecutar pago x402
-    H-->>G: Transacción confirmada
-    G->>T: Reintentar solicitud con pago
-    T-->>G: Resultado premium
-    G-->>M: Resultado + transaction_id
-    M-->>A: Auditoría
-    A-->>P: Hallazgos y acciones
+    G->>G: Validate policy and reserve budget
+    G->>H: Execute x402 payment
+    H-->>G: Transaction confirmed
+    G->>T: Retry request with payment
+    T-->>G: Premium result
+    G-->>M: Result + transaction_id
+    M-->>A: Audit
+    A-->>P: Findings and actions
 ```
 
 ---
 
-## 7. Alcance exacto del MVP
+## 7. Exact MVP Scope
 
-El MVP debe demostrar una sola tesis:
+The MVP must demonstrate one thesis:
 
-> Un organizador puede financiar herramientas agentic consumidas por sus participantes, aplicando políticas programables y liquidando cada uso premium mediante x402 sobre Hedera.
+> An organizer can fund agentic tools consumed by participants, enforce programmable policies, and settle every premium use through x402 on Hedera.
 
-### Componentes obligatorios
+### Required Components
 
-1. Evento precargado.
-2. Pantalla inicial de activación.
-3. Dashboard del organizador.
-4. Un MCP remoto.
-5. Un Agent Skill gratuito.
-6. Una herramienta gratuita.
-7. Dos herramientas premium.
+1. Preloaded event.
+2. Initial activation screen.
+3. Organizer dashboard.
+4. One remote MCP.
+5. One free Agent Skill.
+6. One free tool.
+7. Two premium tools.
 8. Sponsor Gateway.
-9. Control de cuotas.
+9. Allowance controls.
 10. Hedera Testnet.
-11. Métricas.
-12. Historial de transacciones.
-13. Sesiones de evento y trazabilidad.
+11. Metrics.
+12. Transaction history.
+13. Event sessions and traceability.
 
 ---
 
-## 8. Evento precargado
+## 8. Preloaded Event
 
-Para el MVP no se implementará un onboarding completo.
+The MVP will not implement full onboarding.
 
-El sistema inicia con un evento ya configurado, por ejemplo:
+The system starts with an already configured event, for example:
 
 ```text
 Hedera x402 Bounty
 ```
 
-### Datos precargados
+### Preloaded Data
 
-- nombre;
-- descripción;
-- fecha de cierre;
-- tracks o categoría;
-- presupuesto;
-- límites por equipo;
-- herramientas habilitadas;
-- fuentes del organizador;
-- participantes iniciales;
-- wallet pagadora;
-- wallet receptora;
-- configuración x402.
+- name;
+- description;
+- closing date;
+- tracks or category;
+- budget;
+- per-team limits;
+- enabled tools;
+- organizer sources;
+- initial participants;
+- payer wallet;
+- recipient wallet;
+- x402 configuration.
 
-### Fuentes premium visibles
+### Visible Premium Sources
 
-Ejemplo:
+Example:
 
 ```text
 Organizer Knowledge
@@ -254,7 +254,7 @@ Organizer Knowledge
 ✓ Official submission validator
 ```
 
-Estas fuentes se almacenan como archivos versionados del organizador y se cargan en el runtime del API.
+These sources are stored as versioned organizer files and loaded into the API runtime.
 
 ### Demo data notice
 
@@ -273,9 +273,9 @@ Estas fuentes se almacenan como archivos versionados del organizador y se cargan
 
 ---
 
-## 9. Estados del evento
+## 9. Event States
 
-Usar únicamente tres estados:
+Use only three states:
 
 ```text
 DRAFT
@@ -285,31 +285,31 @@ PAUSED
 
 ### DRAFT
 
-- Evento listo para configurarse.
-- MCP no disponible para participantes.
-- No se aceptan llamadas.
-- La pantalla principal muestra el botón de activación.
+- Event ready to be configured.
+- MCP unavailable to participants.
+- Calls are not accepted.
+- The main screen shows the activation button.
 
 ### ACTIVE
 
-- MCP disponible.
-- Herramientas gratuitas y premium habilitadas.
-- Sponsor Gateway puede pagar llamadas.
-- Dashboard operativo.
+- MCP available.
+- Free and premium tools enabled.
+- Sponsor Gateway can pay for calls.
+- Operational dashboard.
 
 ### PAUSED
 
-- Nuevas llamadas bloqueadas.
-- No se emite un `402`.
-- No se ejecuta ningún pago.
-- Métricas e historial se conservan.
-- El organizador puede reanudar el evento.
+- New calls blocked.
+- No `402` is issued.
+- No payment is executed.
+- Metrics and history are preserved.
+- The organizer can resume the event.
 
 ---
 
-## 10. UX del organizador
+## 10. Organizer UX
 
-### 10.1 Pantalla inicial
+### 10.1 Initial Screen
 
 ```text
 Hedera x402 Bounty
@@ -329,97 +329,97 @@ Daily team limit:         0.13 USDC (sum of all premium tool allowances)
 [ Enable participant MCP ]
 ```
 
-### 10.2 Activación
+### 10.2 Activation
 
-Al pulsar `Enable participant MCP`:
+When `Enable participant MCP` is clicked:
 
-1. Cambiar `status` a `ACTIVE`.
-2. Habilitar llamadas para `event_id`.
-3. Mostrar endpoint/configuración MCP.
-4. Redirigir al dashboard.
+1. Change `status` to `ACTIVE`.
+2. Enable calls for `event_id`.
+3. Show the MCP endpoint/configuration.
+4. Redirect to the dashboard.
 
-No es necesario desplegar un MCP nuevo. Se usa un servidor MCP multi-tenant.
+Deploying a new MCP is not necessary. A multi-tenant MCP server is used.
 
 ### 10.3 Dashboard
 
-Debe mostrar:
+It must show:
 
-- estado del MCP;
-- presupuesto asignado;
-- presupuesto consumido;
-- presupuesto restante;
-- participantes atendidos;
-- llamadas totales;
-- llamadas gratuitas;
-- llamadas patrocinadas;
-- consumo por herramienta;
-- costo promedio por participante;
-- requisitos faltantes detectados;
-- proyectos listos/no listos;
-- historial de transacciones;
-- participantes y cuotas.
+- MCP status;
+- allocated budget;
+- spent budget;
+- remaining budget;
+- participants served;
+- total calls;
+- free calls;
+- sponsored calls;
+- spending by tool;
+- average cost per participant;
+- missing requirements detected;
+- ready/not-ready projects;
+- transaction history;
+- participants and allowances.
 
-### 10.4 Pausa
+### 10.4 Pause
 
-Botón recomendado:
+Recommended button:
 
 ```text
 [ Pause participant access ]
 ```
 
-No usar “Shutdown server” ni “Delete MCP”.
+Do not use “Shutdown server” or “Delete MCP”.
 
-Al pausar:
+When paused:
 
 - `status = PAUSED`;
-- nuevas llamadas rechazadas;
-- datos preservados;
-- se muestra `Resume participant MCP`.
+- new calls rejected;
+- data preserved;
+- `Resume participant MCP` is shown.
 
 ---
 
-## 11. MCP remoto
+## 11. Remote MCP
 
-### Principio
+### Principle
 
-El MCP es el núcleo técnico del producto.
+The MCP is the product's technical core.
 
-Debe ser:
+It must be:
 
-- remoto;
+- remote;
 - multi-tenant;
-- controlado centralmente;
-- autenticado;
-- actualizado sin redistribuir archivos;
-- capaz de aplicar cuotas;
-- capaz de devolver resultados estructurados.
+- centrally controlled;
+- authenticated;
+- updatable without redistributing files;
+- able to enforce allowances;
+- able to return structured results.
 
-### No hacer
+### Do Not Do
 
-No generar un MCP local descargable por participante en el MVP.
+Do not generate a downloadable local MCP for each participant in the MVP.
 
-Eso añadiría:
+That would add:
 
-- problemas de instalación;
-- diferencias entre sistemas operativos;
-- credenciales expuestas;
-- versiones desactualizadas;
-- más soporte;
-- una demo más frágil.
+- installation problems;
+- operating-system differences;
+- exposed credentials;
+- outdated versions;
+- more support burden;
+- a more fragile demo.
 
 ---
 
-## 12. Herramientas MCP del MVP
+## 12. MVP MCP Tools
 
-El MCP tendrá exactamente tres herramientas.
+The MCP will have exactly three tools.
 
 ### 12.1 `get_event_guidance`
 
-**Tipo:** gratuita.
+**Type:** free.
 
-**Objetivo:** responder preguntas básicas usando información pública y oficial.
+**Objective:** answer basic questions using public and official information.
 
-#### Entrada
+#### Input
 
 ```json
 {
@@ -428,50 +428,50 @@ El MCP tendrá exactamente tres herramientas.
 }
 ```
 
-#### Salida
+#### Output
 
-- reglas;
-- fechas;
+- rules;
+- dates;
 - tracks;
-- entregables;
-- recursos;
-- criterios públicos;
-- enlaces oficiales.
+- deliverables;
+- resources;
+- public criteria;
+- official links.
 
-#### Comportamiento económico
+#### Economic Behavior
 
-- no devuelve `402`;
-- no consume presupuesto;
-- registra una llamada gratuita para métricas.
+- does not return `402`;
+- does not consume budget;
+- records a free call for metrics.
 
 ---
 
 ### 12.2 `validate_project_strategy`
 
-**Tipo:** premium económica.
+**Type:** low-cost premium.
 
-**Precio inicial del MVP:** `0.01 USDC`.
+**Initial MVP price:** `0.01 USDC`.
 
-**Objetivo:** evaluar una idea contra conocimiento exclusivo o curado del organizador.
+**Objective:** evaluate an idea against exclusive or curated organizer knowledge.
 
-#### No debe ser
+#### Must Not Be
 
-Una simple llamada a un LLM que analiza una descripción.
+A simple LLM call that analyzes a description.
 
-#### Debe combinar
+#### Must Combine
 
 ```text
-Idea del participante
-+ reglas oficiales
-+ proyectos ganadores
-+ comentarios del organizador
-+ patrones de saturación
-+ objetivos de sponsors
-+ errores frecuentes
-= evaluación estratégica
+Participant idea
++ official rules
++ winning projects
++ organizer comments
++ saturation patterns
++ sponsor objectives
++ common errors
+= strategic evaluation
 ```
 
-#### Entrada
+#### Input
 
 ```json
 {
@@ -483,7 +483,7 @@ Idea del participante
 }
 ```
 
-#### Salida esperada
+#### Expected Output
 
 ```text
 Strategic fit: 82/100
@@ -513,25 +513,25 @@ Recommended next actions
 
 ### 12.3 `audit_submission`
 
-**Tipo:** premium principal.
+**Type:** primary premium.
 
-**Precio inicial del MVP:** `0.05 USDC`.
+**Initial MVP price:** `0.05 USDC`.
 
-**Objetivo:** auditar una entrega usando reglas, conocimiento del organizador y validadores.
+**Objective:** audit a submission using rules, organizer knowledge, and validators.
 
-#### Debe combinar
+#### Must Combine
 
 ```text
-Repositorio y entrega
-+ checklist oficial
-+ aclaraciones
-+ patrones de descalificación
-+ validadores del sponsor
-+ verificación de evidencias
-= auditoría reproducible
+Repository and submission
++ official checklist
++ clarifications
++ disqualification patterns
++ sponsor validators
++ evidence verification
+= reproducible audit
 ```
 
-#### Entrada
+#### Input
 
 ```json
 {
@@ -546,23 +546,23 @@ Repositorio y entrega
 }
 ```
 
-#### Controles posibles
+#### Possible Checks
 
-- repositorio público;
+- public repository;
 - README;
-- licencia;
-- instrucciones de instalación;
-- demo disponible;
-- enlaces válidos;
-- evidencia del flujo `402 -> payment -> response`;
-- transacción en Hedera Testnet;
-- wallets pagadora y receptora diferenciadas;
-- integración x402 visible;
-- requisitos específicos del evento;
-- errores frecuentes de descalificación;
-- checklist oficial.
+- license;
+- installation instructions;
+- demo available;
+- valid links;
+- evidence of the `402 -> payment -> response` flow;
+- Hedera Testnet transaction;
+- distinct payer and recipient wallets;
+- visible x402 integration;
+- event-specific requirements;
+- common disqualification errors;
+- official checklist.
 
-#### Salida esperada
+#### Expected Output
 
 ```text
 Submission readiness: 76%
@@ -589,31 +589,31 @@ Recommended actions
 
 ## 13. Agent Skill
 
-El Agent Skill es gratuito y complementario.
+The Agent Skill is free and complementary.
 
-### Responsabilidades
+### Responsibilities
 
-- explicar el workflow;
-- conocer las herramientas MCP;
-- preparar contexto;
-- evitar llamadas premium innecesarias;
-- indicar cuándo usar cada herramienta;
-- revisar localmente primero;
-- explicar al usuario que la llamada es patrocinada;
-- interpretar el resultado.
+- explain the workflow;
+- know the MCP tools;
+- prepare context;
+- avoid unnecessary premium calls;
+- indicate when to use each tool;
+- check locally first;
+- explain to the user that the call is sponsored;
+- interpret the result.
 
-### Ejemplo de comportamiento
+### Example Behavior
 
-Antes de llamar a `audit_submission`:
+Before calling `audit_submission`:
 
-1. revisar README localmente;
-2. comprobar estructura;
-3. buscar enlaces;
-4. detectar problemas obvios;
-5. solicitar datos faltantes;
-6. llamar a la herramienta premium solo si aporta valor.
+1. check the README locally;
+2. check the structure;
+3. look for links;
+4. detect obvious problems;
+5. request missing data;
+6. call the premium tool only if it adds value.
 
-### Estructura sugerida
+### Suggested Structure
 
 ```text
 hackrails-participant-skill/
@@ -626,32 +626,32 @@ hackrails-participant-skill/
     └── audit-submission.md
 ```
 
-### Regla de producto
+### Product Rule
 
-El Skill no contiene el conocimiento premium completo. El conocimiento premium vive en HackRails y se obtiene mediante herramientas MCP.
+The Skill does not contain the complete premium knowledge. Premium knowledge lives in HackRails and is accessed through MCP tools.
 
 ---
 
 ## 14. Sponsor Gateway
 
-El Sponsor Gateway es el corazón económico.
+The Sponsor Gateway is the economic core.
 
-### Responsabilidades mínimas
+### Minimum Responsibilities
 
-1. autenticar participante;
-2. identificar evento;
-3. comprobar estado;
-4. comprobar herramienta habilitada;
-5. comprobar presupuesto del evento;
-6. comprobar cuota del participante;
-7. comprobar límite por herramienta;
-8. reservar temporalmente el importe;
-9. ejecutar flujo x402;
-10. registrar transacción;
-11. actualizar métricas;
-12. devolver resultado.
+1. authenticate the participant;
+2. identify the event;
+3. check the status;
+4. check that the tool is enabled;
+5. check the event budget;
+6. check the participant allowance;
+7. check the per-tool limit;
+8. temporarily reserve the amount;
+9. execute the x402 flow;
+10. record the transaction;
+11. update metrics;
+12. return the result.
 
-### Flujo
+### Flow
 
 ```text
 MCP request
@@ -679,47 +679,47 @@ Persist result and transaction
 Return response
 ```
 
-### Rechazos
+### Rejections
 
-Si la política falla:
+If the policy check fails:
 
 ```text
 Sponsored allowance exceeded.
 No payment was executed.
 ```
 
-No debe producirse un pago si:
+No payment should occur if:
 
-- evento pausado;
-- token inválido;
-- herramienta deshabilitada;
-- cuota agotada;
-- presupuesto insuficiente;
-- límite de llamadas alcanzado;
-- precio superior al permitido.
+- event paused;
+- invalid token;
+- tool disabled;
+- allowance exhausted;
+- insufficient budget;
+- call limit reached;
+- price above the allowed amount.
 
 ---
 
-## 15. Identificación de participantes
+## 15. Participant Identification
 
-### Decisión
+### Decision
 
-Controlar principalmente por equipo, no necesariamente por individuo.
+Control primarily by team, not necessarily by individual.
 
-### Sin registro completo
+### Without Full Registration
 
-No implementar:
+Do not implement:
 
 - email/password;
-- verificación de correo;
-- recuperación de contraseña;
-- roles de equipo;
-- invitaciones;
-- onboarding complejo.
+- email verification;
+- password recovery;
+- team roles;
+- invitations;
+- complex onboarding.
 
-### Credencial mínima
+### Minimum Credential
 
-Cada equipo recibe:
+Each team receives:
 
 ```text
 Team Agentard
@@ -728,7 +728,7 @@ Access token: hxp_participant_xxxxx
 Sponsored allowance: 0.20 USDC
 ```
 
-Configuración MCP:
+MCP configuration:
 
 ```json
 {
@@ -745,24 +745,24 @@ Configuración MCP:
 
 ### Token
 
-Puede ser:
+It may be:
 
-- JWT firmado;
-- API key aleatoria;
-- token almacenado como hash.
+- signed JWT;
+- random API key;
+- token stored as a hash.
 
-Nunca incluir:
+Never include:
 
 - private key;
 - seed phrase;
-- credencial de wallet;
-- token de gasto ilimitado.
+- wallet credential;
+- unlimited-spend token.
 
 ---
 
-## 16. Políticas de uso
+## 16. Usage Policies
 
-Configuración inicial recomendada:
+Recommended initial configuration:
 
 ```text
 Event budget:              100.00 USDC
@@ -778,95 +778,95 @@ Price:                       0.05 USDC
 Max calls per team:          2
 ```
 
-### Niveles de control
+### Control Levels
 
 ```text
-Presupuesto global
-    ↓
-Cuota por equipo
-    ↓
-    Límite diario agregado de llamadas premium
-    ↓
-Límite por herramienta
+Global budget
+     ↓
+Per-team allowance
+     ↓
+    Aggregate daily premium-call limit
+     ↓
+Per-tool limit
 ```
 
 ---
 
-## 17. Idempotencia y concurrencia
+## 17. Idempotency and Concurrency
 
 ### Idempotency key
 
-Cada llamada premium debe incluir una clave única.
+Each premium call must include a unique key.
 
-Ejemplo:
+Example:
 
 ```text
 team001-audit-submission-request007
 ```
 
-Si se repite la petición:
+If the request is repeated:
 
-- devolver resultado anterior;
-- no ejecutar un nuevo pago;
-- no duplicar métricas.
+- return the previous result;
+- do not execute a new payment;
+- do not duplicate metrics.
 
-### Reserva de presupuesto
+### Budget Reservation
 
-Antes de pagar:
+Before paying:
 
-1. crear registro `PENDING`;
-2. reservar monto;
-3. ejecutar pago;
-4. cambiar a `SETTLED`;
-5. confirmar consumo.
+1. create a `PENDING` record;
+2. reserve the amount;
+3. execute the payment;
+4. change to `SETTLED`;
+5. confirm usage.
 
-Si falla:
+If it fails:
 
-- cambiar a `FAILED`;
-- liberar reserva;
-- no descontar presupuesto.
+- change to `FAILED`;
+- release the reservation;
+- do not deduct the budget.
 
-Esto evita que llamadas concurrentes gasten el mismo saldo.
+This prevents concurrent calls from spending the same balance.
 
 ---
 
-## 18. Métricas
+## 18. Metrics
 
-Las métricas son obligatorias.
+Metrics are mandatory.
 
-### 18.1 Métricas financieras
+### 18.1 Financial Metrics
 
-- presupuesto asignado;
-- presupuesto consumido;
-- presupuesto restante;
-- costo promedio por participante;
-- consumo por herramienta;
-- cantidad de pagos;
-- pagos fallidos;
-- pagos rechazados por política.
+- allocated budget;
+- spent budget;
+- remaining budget;
+- average cost per participant;
+- spending by tool;
+- number of payments;
+- failed payments;
+- policy-rejected payments.
 
-### 18.2 Métricas de uso
+### 18.2 Usage Metrics
 
-- participantes atendidos;
-- equipos activos;
-- llamadas totales;
-- llamadas gratuitas;
-- llamadas patrocinadas;
-- herramienta más utilizada;
-- llamadas por equipo;
-- tasa de uso por herramienta.
+- participants served;
+- active teams;
+- total calls;
+- free calls;
+- sponsored calls;
+- most-used tool;
+- calls per team;
+- usage rate by tool.
 
-### 18.3 Métricas de impacto
+### 18.3 Impact Metrics
 
-Mínimo:
+Minimum:
 
-- requisitos faltantes detectados;
-- entregas auditadas;
-- entregas listas;
-- entregas no listas;
-- problemas bloqueantes detectados.
+- missing requirements detected;
+- submissions audited;
+- ready submissions;
+- not-ready submissions;
+- blocking issues detected.
 
-### Ejemplo
+### Example
 
 ```text
 Participants supported:       42
@@ -879,23 +879,23 @@ Budget spent:               3.42 USDC
 
 ---
 
-## 19. Historial de transacciones
+## 19. Transaction History
 
-Cada uso premium debe registrar:
+Each premium use must record:
 
-- evento;
-- participante/equipo;
-- herramienta;
-- precio;
-- estado;
+- event;
+- participant/team;
+- tool;
+- price;
+- status;
 - transaction ID;
-- enlace HashScan;
+- HashScan link;
 - timestamp;
 - idempotency key;
-- latencia;
-- resultado asociado.
+- latency;
+- associated result.
 
-Ejemplo:
+Example:
 
 ```text
 Team Agentard
@@ -908,11 +908,11 @@ Transaction: 0.0.xxxxx@...
 
 ---
 
-## 20. Event session lifecycle
+## 20. Event Session Lifecycle
 
-Las transacciones de Hedera no se pueden borrar. Por eso cada evento mantiene sesiones de operación que permiten separar periodos de actividad sin alterar el historial de settlement.
+Hedera transactions cannot be deleted. Therefore, each event maintains operational sessions that separate activity periods without altering the settlement history.
 
-### Entidad conceptual
+### Conceptual Entity
 
 ```json
 {
@@ -924,7 +924,7 @@ Las transacciones de Hedera no se pueden borrar. Por eso cada evento mantiene se
 }
 ```
 
-### Session transition
+### Session Transition
 
 1. Create the event session with its budget and enabled tools.
 2. Activate participant access.
@@ -936,9 +936,9 @@ The UI identifies session boundaries and preserves transaction history for audit
 
 ---
 
-## 21. Dashboard de participantes
+## 21. Participant Dashboard
 
-Sección mínima:
+Minimum section:
 
 ```text
 Team Agentard
@@ -954,7 +954,7 @@ Submission audits: 0 / 2
 Status: Active
 ```
 
-Acciones mínimas:
+Minimum actions:
 
 ```text
 [ Copy MCP access ]
@@ -962,11 +962,11 @@ Acciones mínimas:
 [ Reset participant usage ]
 ```
 
-No implementar gestión organizacional compleja.
+Do not implement complex organizational management.
 
 ---
 
-## 22. Modelo de datos mínimo
+## 22. Minimum Data Model
 
 ### EVENT
 
@@ -1080,7 +1080,7 @@ settled_at
 
 ### DAILY_USAGE
 
-Opcional para simplificar consultas:
+Optional to simplify queries:
 
 ```text
 participant_id
@@ -1091,9 +1091,9 @@ call_count
 
 ---
 
-## 23. API sugerida
+## 23. Suggested API
 
-### Evento
+### Event
 
 ```http
 GET  /api/events/:eventId
@@ -1111,7 +1111,7 @@ GET /api/events/:eventId/transactions
 GET /api/events/:eventId/participants
 ```
 
-### Participantes
+### Participants
 
 ```http
 POST /api/events/:eventId/participants
@@ -1120,14 +1120,14 @@ POST /api/participants/:participantId/resume
 POST /api/participants/:participantId/reset-demo-usage
 ```
 
-### Administrative controls
+### Administrative Controls
 
 ```http
 POST /api/admin/demo/reset
 POST /api/admin/demo/seed
 ```
 
-### MCP / herramientas
+### MCP / Tools
 
 ```text
 get_event_guidance
@@ -1135,7 +1135,7 @@ validate_project_strategy
 audit_submission
 ```
 
-### Pagos internos
+### Internal Payments
 
 ```http
 POST /internal/sponsor/authorize
@@ -1146,7 +1146,7 @@ POST /internal/sponsor/release
 
 ---
 
-## 24. Arquitectura lógica
+## 24. Logical Architecture
 
 ```mermaid
 flowchart LR
@@ -1180,25 +1180,25 @@ flowchart LR
 
 ---
 
-## 25. Separación económica
+## 25. Economic Separation
 
-Para el evento se deben representar actores económicos distintos:
+The event must represent distinct economic actors:
 
-- wallet del organizador: pagadora;
-- wallet del proveedor: receptora;
-- participante: beneficiario del servicio.
+- organizer wallet: payer;
+- provider wallet: recipient;
+- participant: service beneficiary.
 
-Aunque el equipo controle ambas wallets en Testnet, la UI y la arquitectura deben dejar clara la separación.
+Even if the team controls both wallets on Testnet, the UI and architecture must make the separation clear.
 
-### Evitar
+### Avoid
 
 ```text
-Nuestra wallet paga a nuestro endpoint y vuelve a nuestra wallet
+Our wallet pays our endpoint and returns to our wallet
 ```
 
-sin explicación.
+without explanation.
 
-### Mostrar
+### Show
 
 ```text
 Organizer Budget Wallet
@@ -1209,51 +1209,51 @@ Organizer Budget Wallet
 
 ---
 
-## 26. Seguridad y privacidad
+## 26. Security and Privacy
 
-### Seguridad
+### Security
 
-- claves privadas solo en backend seguro;
-- tokens de participante limitados;
+- private keys only in a secure backend;
+- limited participant tokens;
 - rate limiting;
-- límites por herramienta;
-- validación de precio;
-- idempotencia;
-- logs de auditoría;
-- nunca devolver secretos;
-- separar rutas admin;
-- proteger los endpoints administrativos de sesión y fixtures con autorización.
+- per-tool limits;
+- price validation;
+- idempotency;
+- audit logs;
+- never return secrets;
+- separate admin routes;
+- protect administrative session and fixture endpoints with authorization.
 
-### Privacidad
+### Privacy
 
-Por defecto:
+By default:
 
-- métricas agregadas para el organizador;
-- no exponer código privado;
-- no almacenar repositorios completos innecesariamente;
-- consentimiento explícito para análisis;
-- retención mínima;
-- resultados personales visibles para el participante;
-- evitar presentar el producto como vigilancia.
+- aggregated metrics for the organizer;
+- do not expose private code;
+- do not store complete repositories unnecessarily;
+- explicit consent for analysis;
+- minimal retention;
+- personal results visible to the participant;
+- avoid presenting the product as surveillance.
 
-### Información del jurado
+### Judge Information
 
-Permitido:
+Allowed:
 
-- biografías públicas;
-- áreas de experiencia;
-- criterios declarados;
-- publicaciones;
-- comentarios oficiales.
+- public biographies;
+- areas of expertise;
+- stated criteria;
+- publications;
+- official comments.
 
-No prometer:
+Do not promise:
 
-- preferencias privadas;
-- criterios secretos;
-- información privilegiada;
-- manipulación de jueces.
+- private preferences;
+- secret criteria;
+- privileged information;
+- judge manipulation.
 
-Usar el término:
+Use the term:
 
 ```text
 Organizer-backed intelligence
@@ -1261,62 +1261,62 @@ Organizer-backed intelligence
 
 ---
 
-## 27. Guion de demo recomendado
+## 27. Recommended Demo Script
 
-Duración objetivo: aproximadamente 4 minutos.
+Target duration: approximately 4 minutes.
 
-### 0:00–0:25 — Problema
+### 0:00–0:25 — Problem
 
-Explicar:
+Explain:
 
-- organizadores reciben preguntas repetidas;
-- participantes incumplen requisitos;
-- herramientas agentic tienen costo;
-- HackRails permite financiarlas por uso.
+- organizers receive repeated questions;
+- participants fail to meet requirements;
+- agentic tools have a cost;
+- HackRails allows them to be funded per use.
 
-### 0:25–0:50 — Evento precargado
+### 0:25–0:50 — Preloaded Event
 
-Mostrar:
+Show:
 
-- nombre;
-- conocimiento oficial;
-- presupuesto;
-- límites;
-- herramientas.
+- name;
+- official knowledge;
+- budget;
+- limits;
+- tools.
 
-Pulsar:
+Click:
 
 ```text
 Enable participant MCP
 ```
 
-### 0:50–1:15 — Consulta gratuita
+### 0:50–1:15 — Free Query
 
-Desde Codex:
-
-```text
-¿Qué debo mostrar en la demo?
-```
-
-Se llama `get_event_guidance`.
-
-Mostrar:
-
-- respuesta;
-- no hubo pago;
-- presupuesto sin cambios.
-
-### 1:15–2:00 — Validación premium
-
-Desde Codex:
+From Codex:
 
 ```text
-Evalúa si nuestra idea es competitiva usando la inteligencia oficial del organizador.
+What must I show in the demo?
 ```
 
-Se llama `validate_project_strategy`.
+Call `get_event_guidance`.
 
-Mostrar:
+Show:
+
+- response;
+- no payment occurred;
+- budget unchanged.
+
+### 1:15–2:00 — Premium Validation
+
+From Codex:
+
+```text
+Evaluate whether our idea is competitive using the organizer's official intelligence.
+```
+
+Call `validate_project_strategy`.
+
+Show:
 
 ```text
 402 Payment Required
@@ -1324,360 +1324,360 @@ Sponsor policy approved
 0.01 USDC settled on Hedera
 ```
 
-Luego mostrar resultado.
+Then show the result.
 
-### 2:00–2:50 — Auditoría premium
+### 2:00–2:50 — Premium Audit
 
-Desde Codex:
+From Codex:
 
 ```text
-Audita la entrega y dime si estamos listos.
+Audit the submission and tell me whether we are ready.
 ```
 
-Se llama `audit_submission`.
+Call `audit_submission`.
 
-Mostrar:
+Show:
 
-- resultado estructurado;
-- bloqueantes;
-- costo `0.05 USDC`;
+- structured result;
+- blocking issues;
+- cost `0.05 USDC`;
 - transaction ID.
 
-### 2:50–3:30 — Dashboard actualizado
+### 2:50–3:30 — Updated Dashboard
 
-Mostrar:
+Show:
 
-- llamadas nuevas;
-- presupuesto reducido;
-- cuota del equipo;
-- uso por herramienta;
-- métricas;
-- transacciones.
+- new calls;
+- reduced budget;
+- team allowance;
+- usage by tool;
+- metrics;
+- transactions.
 
-Abrir HashScan.
+Open HashScan.
 
-### 3:30–4:00 — Visión
+### 3:30–4:00 — Vision
 
-Explicar:
+Explain:
 
-> Hoy HackRails ofrece inteligencia y validación oficial. Mañana cualquier sponsor puede publicar datasets, sandboxes, modelos o herramientas y cobrar directamente por cada uso.
+> Today HackRails offers official intelligence and validation. Tomorrow, any sponsor can publish datasets, sandboxes, models, or tools and charge directly for each use.
 
 ---
 
-## 28. Qué NO entra en el MVP
+## 28. What Is NOT in the MVP
 
-Excluir:
+Exclude:
 
-- registro completo de organizadores;
-- login tradicional;
-- verificación de correo;
-- recuperación de contraseña;
-- creación de organizaciones;
-- invitaciones;
-- múltiples roles;
-- creación dinámica de cualquier hackathon desde URL;
-- generador de Agent Skills;
-- marketplace de proveedores;
-- múltiples eventos en producción;
+- full organizer registration;
+- traditional login;
+- email verification;
+- password recovery;
+- organization creation;
+- invitations;
+- multiple roles;
+- dynamic creation of any hackathon from a URL;
+- Agent Skill generator;
+- provider marketplace;
+- multiple events in production;
 - mainnet;
-- MCP local;
-- app móvil;
+- local MCP;
+- mobile app;
 - Devpost integration;
-- análisis de video;
-- ejecución arbitraria de repositorios;
-- scoring predictivo de ganar;
+- video analysis;
+- arbitrary repository execution;
+- predictive win scoring;
 - NFT;
-- token propio;
+- proprietary token;
 - Stripe;
-- facturación tradicional;
-- antifraude avanzado;
+- traditional billing;
+- advanced fraud prevention;
 - white-labeling;
-- soporte simultáneo perfecto para todos los clientes MCP;
-- chat interno;
-- equipos y colaboración completa;
+- perfect simultaneous support for all MCP clients;
+- internal chat;
+- full teams and collaboration;
 - DRM.
 
 ---
 
-## 29. Features opcionales si sobra tiempo
+## 29. Optional Features if Time Allows
 
-Prioridad posterior al flujo principal:
+Priority after the main flow:
 
 1. `review_architecture`;
-2. alerta de presupuesto bajo;
-3. edición visual de cuotas;
-4. exportación CSV;
-5. comparación entre herramientas;
-6. listado “coming soon”;
-7. rechazo visible por límite agotado;
-8. fuentes del organizador versionadas;
-9. vista de actividad por equipo;
-10. retries seguros de pago.
+2. low-budget alert;
+3. visual allowance editing;
+4. CSV export;
+5. tool comparison;
+6. “coming soon” listing;
+7. visible rejection when a limit is exhausted;
+8. versioned organizer sources;
+9. activity view by team;
+10. safe payment retries.
 
 ---
 
-## 30. Criterios de aceptación del MVP
+## 30. MVP Acceptance Criteria
 
-### Evento
+### Event
 
-- [ ] Existe un evento precargado.
-- [ ] Puede activarse.
-- [ ] Puede pausarse.
-- [ ] Puede reanudarse.
-- [ ] El estado afecta realmente las llamadas.
+- [ ] A preloaded event exists.
+- [ ] It can be activated.
+- [ ] It can be paused.
+- [ ] It can be resumed.
+- [ ] The status actually affects calls.
 
 ### MCP
 
-- [ ] Existe un servidor MCP remoto.
-- [ ] Expone tres herramientas.
-- [ ] La herramienta gratuita funciona sin pago.
-- [ ] Las dos herramientas premium pasan por x402.
-- [ ] Las respuestas son estructuradas.
+- [ ] A remote MCP server exists.
+- [ ] It exposes three tools.
+- [ ] The free tool works without payment.
+- [ ] Both premium tools go through x402.
+- [ ] Responses are structured.
 
-### Participantes
+### Participants
 
-- [ ] Cada equipo tiene token.
-- [ ] Cada equipo tiene cuota.
-- [ ] Se limita uso por herramienta.
-- [ ] Se registra consumo.
-- [ ] Una llamada rechazada no paga.
+- [ ] Each team has a token.
+- [ ] Each team has an allowance.
+- [ ] Usage is limited by tool.
+- [ ] Usage is recorded.
+- [ ] A rejected call does not pay.
 
-### Pagos
+### Payments
 
-- [ ] Wallet pagadora y receptora separadas.
-- [ ] Pago real en Hedera Testnet.
-- [ ] Transaction ID persistido.
-- [ ] Enlace HashScan visible.
-- [ ] Idempotencia evita pagos duplicados.
+- [ ] Payer and recipient wallets are separate.
+- [ ] Real payment on Hedera Testnet.
+- [ ] Transaction ID persisted.
+- [ ] HashScan link visible.
+- [ ] Idempotency prevents duplicate payments.
 
 ### Dashboard
 
-- [ ] Muestra presupuesto.
-- [ ] Muestra uso.
-- [ ] Muestra participantes.
-- [ ] Muestra métricas.
-- [ ] Muestra transacciones.
-- [ ] Se actualiza después de las llamadas.
+- [ ] Shows budget.
+- [ ] Shows usage.
+- [ ] Shows participants.
+- [ ] Shows metrics.
+- [ ] Shows transactions.
+- [ ] Updates after calls.
 
 ### Demo
 
-- [ ] Puede resetearse.
-- [ ] Puede sembrar actividad.
-- [ ] El flujo completo cabe en menos de 5 minutos.
-- [ ] Al menos dos pagos reales quedan visibles.
-- [ ] La narrativa explica por qué x402 es necesario.
+- [ ] It can be reset.
+- [ ] Activity can be seeded.
+- [ ] The complete flow fits in under 5 minutes.
+- [ ] At least two real payments remain visible.
+- [ ] The narrative explains why x402 is necessary.
 
 ---
 
-## 31. Orden recomendado de implementación
+## 31. Recommended Implementation Order
 
-### Fase 1 — Flujo vertical mínimo
+### Phase 1 — Minimum Vertical Slice
 
-1. Evento precargado.
-2. Participante precargado.
-3. MCP con una herramienta premium temporal.
-4. Sponsor Gateway básico.
-5. Pago Hedera Testnet.
-6. Registro de transacción.
-7. Respuesta al agente.
+1. Preloaded event.
+2. Preloaded participant.
+3. MCP with a temporary premium tool.
+4. Basic Sponsor Gateway.
+5. Hedera Testnet payment.
+6. Transaction record.
+7. Response to the agent.
 
-### Fase 2 — Herramientas
+### Phase 2 — Tools
 
 1. `get_event_guidance`.
 2. `validate_project_strategy`.
 3. `audit_submission`.
-4. Fuentes premium precargadas.
+4. Preloaded premium sources.
 
-### Fase 3 — Políticas
+### Phase 3 — Policies
 
-1. cuota por equipo;
-2. límite por herramienta;
-3. estado activo/pausado;
-4. idempotencia;
-5. reserva de presupuesto.
+1. per-team allowance;
+2. per-tool limit;
+3. active/paused status;
+4. idempotency;
+5. budget reservation.
 
-### Fase 4 — Dashboard
+### Phase 4 — Dashboard
 
-1. presupuesto;
-2. métricas;
-3. participantes;
-4. herramientas;
-5. historial de transacciones.
+1. budget;
+2. metrics;
+3. participants;
+4. tools;
+5. transaction history.
 
-### Fase 5 — Demo
+### Phase 5 — Demo
 
 1. reset;
 2. seed;
 3. Agent Skill;
-4. guion;
+4. script;
 5. HashScan;
 6. video.
 
 ---
 
-## 32. Regla de priorización
+## 32. Prioritization Rule
 
-Antes de implementar una feature, preguntar:
+Before implementing a feature, ask:
 
-> ¿Esta feature ayuda a demostrar que un organizador puede financiar herramientas agentic consumidas por sus participantes mediante x402?
+> Does this feature help demonstrate that an organizer can fund agentic tools consumed by participants through x402?
 
-Si la respuesta es no, no entra al MVP.
+If the answer is no, it is not part of the MVP.
 
 ---
 
-## 33. Riesgos principales
+## 33. Main Risks
 
-### Riesgo 1: parecer un wrapper de IA
+### Risk 1: Looking Like an AI Wrapper
 
-Mitigación:
+Mitigation:
 
-- fuentes exclusivas visibles;
-- validadores;
+- visible exclusive sources;
+- validators;
 - organizer-backed insights;
-- resultados reproducibles;
-- métricas.
+- reproducible results;
+- metrics.
 
-### Riesgo 2: x402 artificial
+### Risk 2: Artificial x402
 
-Mitigación:
+Mitigation:
 
-- pago por llamada;
-- herramientas con precios diferentes;
-- wallet pagadora y receptora separadas;
+- payment per call;
+- tools with different prices;
+- separate payer and recipient wallets;
 - dashboard;
 - HashScan;
-- políticas programables.
+- programmable policies.
 
-### Riesgo 3: demasiadas features
+### Risk 3: Too Many Features
 
-Mitigación:
+Mitigation:
 
-- tres herramientas;
-- un evento;
-- dos participantes iniciales;
-- una sola historia.
+- three tools;
+- one event;
+- two initial participants;
+- one story.
 
-### Riesgo 4: dashboard vacío
+### Risk 4: Empty Dashboard
 
-Mitigación:
+Mitigation:
 
-- actividad identificada por sesión;
-- llamadas reales que actualizan métricas.
+- session-identified activity;
+- real calls that update metrics.
 
-### Riesgo 5: pagos duplicados
+### Risk 5: Duplicate Payments
 
-Mitigación:
+Mitigation:
 
 - idempotency key;
-- reserva de presupuesto;
-- estados `PENDING`, `SETTLED`, `FAILED`.
+- budget reservation;
+- statuses `PENDING`, `SETTLED`, `FAILED`.
 
-### Riesgo 6: abuso de presupuesto
+### Risk 6: Budget Abuse
 
-Mitigación:
+Mitigation:
 
-- token por equipo;
-- cuota;
-- límite diario;
-- límite por herramienta;
-- pausa.
+- token per team;
+- allowance;
+- daily limit;
+- per-tool limit;
+- pause.
 
 ---
 
-## 34. Roadmap posterior al MVP
+## 34. Post-MVP Roadmap
 
-### Corto plazo
+### Short Term
 
-- múltiples hackathons;
-- creación guiada de eventos;
-- carga de fuentes;
-- herramientas configurables;
-- más clientes MCP;
-- auditorías más profundas.
+- multiple hackathons;
+- guided event creation;
+- source uploads;
+- configurable tools;
+- more MCP clients;
+- deeper audits.
 
-### Medio plazo
+### Medium Term
 
-- marketplace de herramientas;
-- proveedores externos;
+- tool marketplace;
+- external providers;
 - revenue sharing;
-- datasets premium;
+- premium datasets;
 - sandboxes;
-- validadores de sponsors;
-- presupuestos por track.
+- sponsor validators;
+- budgets by track.
 
-### Largo plazo
+### Long Term
 
-- infraestructura estándar para programas de desarrolladores;
-- aceleradoras;
+- standard infrastructure for developer programs;
+- accelerators;
 - bootcamps;
-- comunidades;
+- communities;
 - grant programs;
-- eventos técnicos;
-- consumo autónomo de herramientas por agentes.
+- technical events;
+- autonomous tool consumption by agents.
 
 ---
 
-## 35. Mensaje central para jurados
+## 35. Core Message for Judges
 
 > HackRails does not replace the participant’s coding agent. It gives that agent access to organizer-backed knowledge, validators and premium services that it cannot produce locally. Organizers sponsor every call through programmable x402 budgets, while Hedera provides transparent settlement and auditability.
 
 ---
 
-## 36. Frases de producto
+## 36. Product Messaging
 
-### Descripción corta
+### Short Description
 
 > HackRails enables organizers to sponsor premium MCP tools that participants consume directly from their coding agents.
 
-### Descripción extendida
+### Extended Description
 
 > HackRails turns organizer knowledge, validators and premium resources into official agent tools. Participants use them from Codex or Claude Code without handling wallets, while organizers define quotas, fund usage and track every x402 payment settled on Hedera.
 
-### Demo line
+### Demo Line
 
 > Organizers provide the intelligence. HackRails provides the payment and access infrastructure. Participants focus on shipping.
 
 ---
 
-## 37. Decisiones cerradas
+## 37. Final Decisions
 
-- Nombre: **HackRails**.
-- Mercado inicial: hackathons.
-- Comprador: organizador.
-- Usuario final: participante.
-- Núcleo técnico: MCP remoto.
-- Complemento: Agent Skill gratuito.
-- Pago: patrocinado por organizador.
-- Unidad económica: llamada premium.
-- Liquidación: x402 sobre Hedera Testnet.
-- Alcance: un evento precargado.
-- Tools: una gratuita y dos premium.
-- Control: token, cuota y límite por herramienta.
-- Demo: reiniciable.
-- Métricas: obligatorias.
-- Registro completo: fuera del MVP.
-- MCP local: fuera del MVP.
+- Name: **HackRails**.
+- Initial market: hackathons.
+- Buyer: organizer.
+- End user: participant.
+- Technical core: remote MCP.
+- Complement: free Agent Skill.
+- Payment: organizer-sponsored.
+- Economic unit: premium call.
+- Settlement: x402 on Hedera Testnet.
+- Scope: one preloaded event.
+- Tools: one free and two premium.
+- Control: token, allowance, and per-tool limit.
+- Demo: resettable.
+- Metrics: mandatory.
+- Full registration: outside the MVP.
+- Local MCP: outside the MVP.
 - Marketplace: roadmap.
 
 ---
 
-## 38. Fuente de verdad
+## 38. Source of Truth
 
-Este documento debe utilizarse para:
+This document must be used to:
 
-- definir el backlog;
-- crear el PRD;
-- diseñar arquitectura;
-- generar tareas para Codex;
-- validar decisiones;
-- controlar scope creep;
-- preparar README y demo.
+- define the backlog;
+- create the PRD;
+- design the architecture;
+- generate tasks for Codex;
+- validate decisions;
+- control scope creep;
+- prepare the README and demo.
 
-Ante una duda de implementación, priorizar:
+When facing an implementation question, prioritize:
 
-1. flujo x402 real;
-2. valor para el organizador;
-3. experiencia sin fricción para el participante;
-4. métricas;
-5. claridad de demo;
-6. extensibilidad futura.
+1. real x402 flow;
+2. organizer value;
+3. frictionless participant experience;
+4. metrics;
+5. demo clarity;
+6. future extensibility.
