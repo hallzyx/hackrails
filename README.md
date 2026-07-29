@@ -129,6 +129,17 @@ HEDERA_RECIPIENT_ACCOUNT_ID=0.0.y
 
 The private key stays API-only. Read [x402 and Hedera](docs/X402_HEDERA.md) for the real settlement flow.
 
+## Hedera Testnet evidence
+
+The following public Testnet transactions correspond to the premium tool calls used as submission evidence:
+
+| Premium tool | HashScan transaction |
+| --- | --- |
+| `validate_project_strategy` | [View transaction](https://hashscan.io/testnet/transaction/0.0.7162784@1785289856.301350719) |
+| `audit_submission` | [View transaction](https://hashscan.io/testnet/transaction/0.0.7162784@1785289942.702732943) |
+
+These transactions are evidence of the two sponsored x402 settlements; they do not represent official Hedera judging results.
+
 ## Repository map
 
 ```text

@@ -10,6 +10,17 @@ This document explains the canonical premium payment path used by the applicatio
 4. Confirm `/health` reports the expected network and mode.
 5. Run a single controlled premium call and verify the HashScan transaction.
 
+## Submission evidence
+
+The repository includes the following Hedera Testnet transaction references for the premium calls:
+
+| Premium tool | HashScan transaction |
+| --- | --- |
+| `validate_project_strategy` | [View transaction](https://hashscan.io/testnet/transaction/0.0.7162784@1785289856.301350719) |
+| `audit_submission` | [View transaction](https://hashscan.io/testnet/transaction/0.0.7162784@1785289942.702732943) |
+
+These links document sponsored x402 settlement evidence. They are not official Hedera judging statements or historical judging results.
+
 ## Roles
 
 | Role | Service | Responsibility |
