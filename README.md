@@ -6,7 +6,12 @@ The API is the policy and payment authority. PostgreSQL is the usage ledger. The
 
 ## Demo video
 
-Watch the HackRails demo: [https://youtu.be/UdI4RnU0G30](https://youtu.be/UdI4RnU0G30)
+Watch the HackRails demo: [https://youtu.be/xs5XYLRnbo4](https://youtu.be/xs5XYLRnbo4)
+
+Wallets used in the demo:
+
+- `0.0.8219587` — organizer wallet holding the sponsor budget that funded the x402 payments.
+- `0.0.7974311` — HackRails wallet that received the USDC for each premium tool call.
 
 ## Start here
 
