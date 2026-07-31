@@ -4,6 +4,10 @@ HackRails is an organizer-sponsored platform for remote MCP tools. Participants 
 
 The API is the policy and payment authority. PostgreSQL is the usage ledger. The API is the only service allowed to use the organizer Hedera private key; browsers, MCP clients, and the premium provider never receive it.
 
+## Demo video
+
+Watch the HackRails demo: [https://youtu.be/UdI4RnU0G30](https://youtu.be/UdI4RnU0G30)
+
 ## Start here
 
 ### Fastest local demo
@@ -214,3 +218,7 @@ Then run the manual smoke test in [Testing](docs/TESTING.md) and inspect `docker
 - Keep product decisions in `hackrails-product-spec.md`.
 - Keep event-specific source material in `organizer-knowledge/`.
 - Update links and verification commands when runtime behavior changes.
+
+## License
+
+HackRails is licensed under the MIT License.
